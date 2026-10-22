@@ -1,0 +1,13 @@
+statistic,value
+bias,0.007987492
+cutpoints,0.1000 0.2000
+fold_rule,depth_block
+n,557
+n_blocks,5
+r2,0.720693944
+r2_full,0.737850483
+rmse,0.695145426
+rmse_sigma,0.528494140
+rmse_sigma_full,0.512005388
+seed,20261007
+sigma,1.315332326

@@ -1,0 +1,32 @@
+# One run of the pipeline.  Every number in the paper's Table 1 for Volve
+# 15/9-19A is reproduced from this file plus data/volve_15_9_19a.csv.
+
+seed: 20261007
+phases: 3
+
+window:
+  phi_min: 0.02
+  phi_max: 0.45
+
+cutpoints:
+  rule: prior          # the boundaries below are fixed before any target is read
+  values: [0.10, 0.20]
+
+folds:
+  rule: depth_block
+  n_blocks: 5
+
+strategies:
+  - prior
+  - target_terciles
+
+output_dir: expected
+
+bodies:
+  - name: volve_15_9_19a
+    file: data/volve_15_9_19a.csv
+    columns:
+      phi: phi
+      perm: kh_md
+      depth: depth_m
+    phi_scale: 1.0

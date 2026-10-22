@@ -1,0 +1,96 @@
+# All five bodies of Table 1.  The archives are not shipped (they are 19 MB to
+# 58 MB each and three of them are redistributed under someone else's terms), so
+# this file reads them from one directory:
+#
+#   export ZEROLEAK_DATA_DIR=/path/to/archives
+#   python -m zeroleak.run --config configs/full.yaml
+#
+# Expected layout (see DATA.md for source, licence and checksum of each file):
+#
+#   $ZEROLEAK_DATA_DIR/spe10/spe_phi.dat
+#   $ZEROLEAK_DATA_DIR/spe10/spe_perm.dat
+#   $ZEROLEAK_DATA_DIR/volve_core_full.csv
+#   $ZEROLEAK_DATA_DIR/brent/cgg_phik_211-29.csv
+#   $ZEROLEAK_DATA_DIR/piper/core_15-17.csv
+#
+# The fold rules differ by body because the bodies differ: contiguous columns on
+# the grid, depth blocks in the single cored well, one well out at a time where
+# several wells are present.
+
+seed: 20261007
+phases: 3
+
+window:
+  phi_min: 0.02
+  phi_max: 0.45
+
+cutpoints:
+  rule: prior
+  values: [0.10, 0.20]
+
+folds:
+  rule: depth_block
+  n_blocks: 5
+
+strategies:
+  - prior
+  - target_terciles
+
+output_dir: out/full
+
+bodies:
+  - name: tarbert
+    label: SPE10 Tarbert
+    file: ${ZEROLEAK_DATA_DIR}/spe10/spe_phi.dat
+    perm_file: ${ZEROLEAK_DATA_DIR}/spe10/spe_perm.dat
+    grid_unit: Tarbert
+    n_subsample: 100000
+    folds:
+      rule: depth_block
+      n_blocks: 5
+
+  - name: upper_ness
+    label: SPE10 Upper Ness
+    file: ${ZEROLEAK_DATA_DIR}/spe10/spe_phi.dat
+    perm_file: ${ZEROLEAK_DATA_DIR}/spe10/spe_perm.dat
+    grid_unit: Upper Ness
+    n_subsample: 100000
+    folds:
+      rule: depth_block
+      n_blocks: 5
+
+  - name: volve_15_9_19a
+    label: Volve 15/9-19A
+    file: ${ZEROLEAK_DATA_DIR}/volve_core_full.csv
+    columns:
+      phi: CPOR
+      perm: CKHG
+      depth: DEPTH
+    phi_scale: 100
+    folds:
+      rule: depth_block
+      n_blocks: 5
+
+  - name: brent_211_29
+    label: Brent 211/29
+    file: ${ZEROLEAK_DATA_DIR}/brent/cgg_phik_211-29.csv
+    columns:
+      phi: phi_pct
+      perm: kh_md
+      group: well
+    phi_scale: 100
+    group_kind: categorical
+    folds:
+      rule: group_block
+
+  - name: piper_15_17
+    label: Piper 15/17
+    file: ${ZEROLEAK_DATA_DIR}/piper/core_15-17.csv
+    columns:
+      phi: Porosity_1
+      perm: Hor_Permeability_1
+      group: WellName
+    phi_scale: 100
+    group_kind: categorical
+    folds:
+      rule: group_block

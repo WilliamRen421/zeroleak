@@ -1,0 +1,54 @@
+{
+  "body": "volve_15_9_19a",
+  "strategy": "target_terciles",
+  "resolved_cutpoints": [
+    0.1523326049992815,
+    0.21000000000000002
+  ],
+  "config": {
+    "seed": 20261007,
+    "phases": 3,
+    "window": {
+      "phi_min": 0.02,
+      "phi_max": 0.45
+    },
+    "cutpoints": {
+      "rule": "prior",
+      "values": [
+        0.1,
+        0.2
+      ]
+    },
+    "folds": {
+      "rule": "depth_block",
+      "n_blocks": 5
+    },
+    "strategies": [
+      "prior",
+      "target_terciles"
+    ],
+    "output_dir": "expected",
+    "bodies": [
+      {
+        "name": "volve_15_9_19a",
+        "file": "data/volve_15_9_19a.csv",
+        "columns": {
+          "phi": "phi",
+          "perm": "kh_md",
+          "depth": "depth_m"
+        },
+        "phi_scale": 1.0
+      }
+    ]
+  },
+  "data_file": {
+    "path": "data/volve_15_9_19a.csv",
+    "sha256": "89a3d45fc836814bd9377bee353a73b5a44496bc5cfe31544b2a4282085785d9",
+    "rows_used": 557
+  },
+  "environment": {
+    "python": "3.11.9",
+    "numpy": "2.4.4",
+    "zeroleak_git": "unknown"
+  }
+}

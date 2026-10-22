@@ -1,0 +1,3 @@
+body,strategy,n,r2,rmse_sigma,r2_full
+volve_15_9_19a,prior,557,0.720693944,0.528494140,0.737850483
+volve_15_9_19a,target_terciles,557,0.714499577,0.534322396,0.736860648

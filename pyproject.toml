@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "zeroleak"
+version = "0.1.0"
+description = "A porosity-only permeability pipeline whose information sets are visible in its call signatures"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.22", "PyYAML>=5.4"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+zeroleak = "zeroleak.run:main"
+
+[tool.setuptools.packages.find]
+include = ["zeroleak*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
