@@ -35,20 +35,27 @@
         "columns": {
           "phi": "phi",
           "perm": "kh_md",
-          "depth": "depth_m"
+          "group": "depth_m"
         },
-        "phi_scale": 1.0
+        "group_kind": "numeric",
+        "phi_scale": 1.0,
+        "fold_rule": null,
+        "n_blocks": null,
+        "perm_file": null,
+        "grid_unit": null,
+        "n_subsample": null,
+        "label": ""
       }
     ]
   },
   "data_file": {
-    "path": "data/volve_15_9_19a.csv",
+    "path": ".\\data/volve_15_9_19a.csv",
     "sha256": "89a3d45fc836814bd9377bee353a73b5a44496bc5cfe31544b2a4282085785d9",
     "rows_used": 557
   },
   "environment": {
     "python": "3.11.9",
     "numpy": "2.4.4",
-    "zeroleak_git": "unknown"
+    "zeroleak_git": "30500fd+dirty"
   }
 }
