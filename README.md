@@ -1,5 +1,11 @@
 # zeroleak
 
+> **Status: draft, not released.** The code runs and its tests pass, but the
+> licence, the author list, the archive DOI and the public data registry are
+> still to be settled, and the manuscript claims no repository URL. The full
+> five-body run needs `ZEROLEAK_DATA_DIR` pointing at the external archives
+> listed in `DATA.md`; only the Volve body ships with this directory.
+
 A five-layer pipeline for predicting permeability from porosity alone, in which
 each layer's information set is a **type in its signature** rather than a promise
 in a paper.
