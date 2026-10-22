@@ -42,11 +42,41 @@ contains no `quantile`, `percentile` or `median` call, `report.py` imports neith
 numpy nor the model, and only `data.py` and `report.py` open a file. Those are
 properties of the code, not of its documentation.
 
+## The audit: the failure a signature cannot catch
+
+Types certify what a function may see. They cannot certify that the held-out fold
+is worth scoring, because a fold rule is a function of porosity and depth that
+returns labels: a random split satisfies every check in `tests/` while leaving a
+core plug 25 cm from the sample it is asked to predict. The information set is
+clean and the evaluation is not.
+
+`zeroleak audit` measures the split instead of declaring it. For every sample it
+finds the distance to the nearest sample in another fold and reports it in units
+of the median spacing between adjacent samples:
+
+| rule | nearest training sample | test samples within 1 spacing | R² prior | R² terciles | ΔR² | verdict |
+|---|---|---|---|---|---|---|
+| `depth_block` | 44.0 spacings | 0.7% | 0.7207 | 0.7145 | +0.0062 | blocked |
+| `index_block` | 42.0 spacings | 1.1% | 0.7069 | 0.7029 | +0.0040 | blocked |
+| `random_block` | 1.0 spacings | 88% | 0.724–0.734 | 0.7317 | +0.0002…+0.0054 | **interpolation** |
+
+The last row is the one to read. It is admitted by every layer — the same
+`FoldLabels`, the same signature — and it shrinks the cutpoint difference the
+manuscript reports from $+0.0062$ to at most $+0.0054$ over five seeds while
+adding up to $0.013$ to held-out R². Interpolation flatters this paper's own
+claim, which is why the numbers it reports come from the certified rule.
+
+```bash
+python -m zeroleak audit --config configs/base.yaml            # ~1 s, no download
+python -m zeroleak audit --config configs/base.yaml --seeds 5  # the range above
+python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on interpolation
+```
+
 ## Quick start
 
 ```bash
 python -m zeroleak.run --config configs/base.yaml     # needs no download
-python -m pytest -q                                   # 30 tests, no download
+python -m pytest -q                                   # 47 tests, no download
 ```
 
 The shipped body is Volve 15/9-19A, 557 core plugs, together with its expected

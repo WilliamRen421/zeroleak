@@ -15,7 +15,7 @@ dependencies = ["numpy>=1.22", "PyYAML>=5.4"]
 test = ["pytest>=7"]
 
 [project.scripts]
-zeroleak = "zeroleak.run:main"
+zeroleak = "zeroleak.__main__:dispatch"
 
 [tool.setuptools.packages.find]
 include = ["zeroleak*"]
