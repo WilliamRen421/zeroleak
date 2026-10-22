@@ -42,6 +42,39 @@ contains no `quantile`, `percentile` or `median` call, `report.py` imports neith
 numpy nor the model, and only `data.py` and `report.py` open a file. Those are
 properties of the code, not of its documentation.
 
+## The registry: what a declaration claims, what a signature allows
+
+`requires` answers what a call may *receive*. It cannot answer what the method
+*says* it uses, because that claim is prose. Registering each predictor with the
+information set its description claims, and reading the implemented set off
+`__requires__`, makes the two comparable in one table:
+
+| predictor | declared | derived | status | available at target |
+|---|---|---|---|---|
+| `prior` | (nothing) | (nothing) | ok | yes |
+| `target_terciles` | `porosity:target` | `porosity` | ok | yes |
+| `free_exponent` | `permeability:train`, `porosity:train`, `folds:train`, `cutpoints:prior` | `permeability`, `porosity`, `folds`, `cutpoints` | ok | **no** |
+
+Three `ok` rows are the intended result: the prior reads nothing, the tercile
+rule reads porosity, and the fit reads permeability inside a fold. The check
+earns its place by what it refuses, and two shapes fail:
+
+- a predictor declared `porosity:target` whose signature also takes
+  `Permeability` — the shape of the FZI family, described as a porosity
+  criterion and computed from the permeability it predicts;
+- any function that takes `Body`, because one legal type name carries porosity,
+  permeability and depth at once. `CARRIES` already says so; the rule that a
+  `Body` never leaves the data layer is a convention, and a convention is not a
+  check.
+
+Neither is caught by the types, because both signatures are legal. The
+difference is written in the declaration, and comparing it with the signature is
+all this module does — no parsing, no inference from a body. What the comparison
+cannot check is provenance: a signature can say *permeability*, it cannot say
+*whether that permeability is the target's*. `permeability:train` and
+`permeability:target` are the same signature and different methods, which is why
+the token is written out rather than inferred.
+
 ## The audit: the failure a signature cannot catch
 
 Types certify what a function may see. They cannot certify that the held-out fold
@@ -50,9 +83,10 @@ returns labels: a random split satisfies every check in `tests/` while leaving a
 core plug 25 cm from the sample it is asked to predict. The information set is
 clean and the evaluation is not.
 
-`zeroleak audit` measures the split instead of declaring it. For every sample it
-finds the distance to the nearest sample in another fold and reports it in units
-of the median spacing between adjacent samples:
+`zeroleak audit` prints the declaration table first, then measures the split
+instead of declaring it. For every sample it finds the distance to the nearest
+sample in another fold and reports it in units of the median spacing between
+adjacent samples:
 
 | rule | nearest training sample | test samples within 1 spacing | R² prior | R² terciles | ΔR² | verdict |
 |---|---|---|---|---|---|---|
@@ -69,14 +103,14 @@ claim, which is why the numbers it reports come from the certified rule.
 ```bash
 python -m zeroleak audit --config configs/base.yaml            # ~1 s, no download
 python -m zeroleak audit --config configs/base.yaml --seeds 5  # the range above
-python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on interpolation
+python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on either finding
 ```
 
 ## Quick start
 
 ```bash
 python -m zeroleak.run --config configs/base.yaml     # needs no download
-python -m pytest -q                                   # 47 tests, no download
+python -m pytest -q                                   # 53 tests, no download
 ```
 
 The shipped body is Volve 15/9-19A, 557 core plugs, together with its expected

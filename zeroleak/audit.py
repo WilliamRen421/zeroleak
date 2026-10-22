@@ -28,6 +28,12 @@ that it is not interpolating.  A blocked split can still be optimistic if the
 field is heterogeneous within a block, and nothing here detects that.  The claim
 it supports is narrower than "leakage-free" and is stated as such in the paper.
 
+The first table the command prints is a different check, and it comes first
+because it is cheaper: `registry.check` compares what each predictor's
+description claims with what its signature can read.  Types certify the
+signature; they say nothing about the description, and the gap between the two
+is where a leak is written down in prose before it is written down in code.
+
     python -m zeroleak.audit --config configs/base.yaml
     python -m zeroleak.audit --config configs/base.yaml --json out/audit.json
     python -m zeroleak.audit --config configs/base.yaml --strict
@@ -46,6 +52,7 @@ import numpy as np
 from .config import BodySpec, Config, load
 from .layers import folds as folds_layer, metrics, model
 from .layers.folds import RULES
+from .registry import REGISTRY, check as check_declarations, table as declaration_table
 from .run import MIN_TRAIN, _load_body
 from .strategies import resolve
 from .types import FoldLabels, Predictions, Truth
@@ -246,7 +253,10 @@ def _table(rows: List[Dict]) -> str:
 def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(
         prog="zeroleak.audit",
-        description="Measure whether a type-legal fold rule interpolates the held-out fold.",
+        description=(
+            "Compare each predictor's declared information set with its signature, "
+            "then measure whether a type-legal fold rule interpolates."
+        ),
     )
     ap.add_argument("--config", required=True, help="the same YAML a run would use")
     ap.add_argument("--root", default=".", help="directory that body paths are relative to")
@@ -255,8 +265,23 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument("--seeds", type=int, default=1,
                     help="repeat every rule over this many seeds and report the range")
     ap.add_argument("--json", default=None, help="write the rows to this file")
-    ap.add_argument("--strict", action="store_true", help="exit 1 if any rule interpolates")
+    ap.add_argument("--strict", action="store_true",
+                    help="exit 1 if a declaration is under-declared or a rule interpolates")
+    ap.add_argument("--no-declarations", action="store_true",
+                    help="skip the declared-versus-implemented table")
     args = ap.parse_args(argv)
+
+    decl_rows = check_declarations(REGISTRY)
+    if not args.no_declarations:
+        print("Declared information set versus the signature, per predictor")
+        print(declaration_table(decl_rows))
+        for r in decl_rows:
+            if r["status"] == "under-declared":
+                print(
+                    f"  {r['predictor']}: the description omits "
+                    f"{', '.join(r['undeclared'])}, which its signature can read"
+                )
+        print()
 
     cfg = load(args.config)
     specs = [b for b in cfg.bodies if args.body is None or b.name == args.body]
@@ -280,11 +305,18 @@ def main(argv: Optional[List[str]] = None) -> int:
             f"permeability, so every type check in the package admits them.  The accuracy and "
             f"the cutpoint difference they produce are not transfer numbers."
         )
+    under = [r["predictor"] for r in decl_rows if r["status"] == "under-declared"]
+    if under:
+        print(
+            f"\n{len(under)} predictor(s) declare less than they can read: "
+            f"{', '.join(under)}.  A type check admits them, because the carrier is "
+            f"legal; the declaration is the only place the difference is written down."
+        )
     if args.json:
         with open(args.json, "w", encoding="utf-8") as fh:
-            json.dump(all_rows, fh, indent=2)
-        print(f"wrote {len(all_rows)} rows to {args.json}")
-    return 1 if (args.strict and flagged) else 0
+            json.dump({"declarations": decl_rows, "folds": all_rows}, fh, indent=2)
+        print(f"wrote {len(decl_rows)} declaration(s) and {len(all_rows)} fold row(s) to {args.json}")
+    return 1 if (args.strict and (flagged or under)) else 0
 
 
 if __name__ == "__main__":

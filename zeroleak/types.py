@@ -257,6 +257,10 @@ def requires(**spec: type) -> Any:
             return fn(*args, **kwargs)
 
         wrapper.__signature__ = signature  # keep the contract introspectable
+        # The contract itself, so that a registry can read what a function is
+        # allowed to see without parsing its body.  An empty dict is a real
+        # declaration: the function takes no data carrier at all.
+        wrapper.__requires__ = dict(spec)
         return wrapper
 
     return decorate

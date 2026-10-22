@@ -24,9 +24,22 @@ import numpy as np
 
 from .types import Cutpoints, Porosity, requires
 
-__all__ = ["STRATEGIES", "resolve", "cutpoints_from_porosity"]
+__all__ = [
+    "STRATEGIES",
+    "resolve",
+    "cutpoints_from_config",
+    "cutpoints_from_porosity",
+]
 
 STRATEGIES = ("prior", "target_terciles")
+
+
+@requires()
+def cutpoints_from_config(cfg) -> Cutpoints:
+    """The prior pair, taken from configuration.  The empty contract is the
+    point: no data carrier appears in the signature, so the values cannot have
+    been touched by the target."""
+    return cfg.cutpoints
 
 
 @requires(phi=Porosity)
@@ -41,7 +54,7 @@ def cutpoints_from_porosity(phi: Porosity, phases: int = 3) -> Cutpoints:
 def resolve(strategy: str, phi: Porosity, cfg) -> Cutpoints:
     """Map a strategy name and a porosity vector to a concrete partition."""
     if strategy == "prior":
-        return cfg.cutpoints
+        return cutpoints_from_config(cfg)
     if strategy == "target_terciles":
         return cutpoints_from_porosity(phi, cfg.phases)
     raise ValueError(f"unknown strategy {strategy!r}; choose from {STRATEGIES}")
