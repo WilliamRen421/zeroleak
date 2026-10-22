@@ -56,6 +56,6 @@
   "environment": {
     "python": "3.11.9",
     "numpy": "2.4.4",
-    "zeroleak_git": "30500fd+dirty"
+    "zeroleak_git": "aea42bb"
   }
 }
