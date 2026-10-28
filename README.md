@@ -108,7 +108,12 @@ python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on eithe
 
 ## Quick start
 
+Unzip, then run everything below from inside the `zeroleak-1.1.0/` directory that the
+archive contains -- `pip install -e .` looks for `pyproject.toml` in the working directory,
+and a shell sitting one level up reports that there is nothing to install.
+
 ```bash
+pip install -e ".[test]"                              # Python 3.11, numpy 2.4.4
 python -m zeroleak run --config configs/base.yaml     # needs no download
 python -m zeroleak verify --config configs/base.yaml  # diff every cell against expected/
 python -m pytest -q                                   # 66 tests, no download
