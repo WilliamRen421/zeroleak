@@ -99,8 +99,21 @@ def _require(mapping: Dict, key: str, where: str):
 
 def _path(value: str) -> str:
     """Expand $ZEROLEAK_DATA_DIR and friends, so that the full-data
-    configurations can be checked in without absolute paths."""
-    return os.path.expandvars(str(value))
+    configurations can be checked in without absolute paths.
+
+    An unexpanded placeholder is turned into an error here rather than being
+    carried to `open()`, where it surfaces as a missing file with a brace in its
+    name and reads like a bug in the pipeline instead of a missing export.
+    """
+    raw = str(value)
+    out = os.path.expandvars(raw)
+    if "${" in out:
+        name = out.split("${", 1)[1].split("}", 1)[0] or "ZEROLEAK_DATA_DIR"
+        raise ValueError(
+            f"'{raw}' refers to ${{{name}}}, which is not set in this shell. "
+            f"Export it (see DATA.md) or run configs/base.yaml, which needs no archives."
+        )
+    return out
 
 
 def load(path: str) -> Config:

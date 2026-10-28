@@ -20,7 +20,11 @@ strategies:
   - prior
   - target_terciles
 
-output_dir: expected
+# Written to out/, never to expected/.  expected/ is the reference produced by a
+# tagged commit and is only ever read; if a run wrote there, it would overwrite the
+# very number it is supposed to be checked against.  `python -m zeroleak verify`
+# runs this file into out/verify and diffs the result against expected/.
+output_dir: out/base
 
 bodies:
   - name: volve_15_9_19a

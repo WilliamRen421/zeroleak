@@ -109,12 +109,13 @@ python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on eithe
 ## Quick start
 
 ```bash
-python -m zeroleak.run --config configs/base.yaml     # needs no download
-python -m pytest -q                                   # 53 tests, no download
+python -m zeroleak run --config configs/base.yaml     # needs no download
+python -m zeroleak verify --config configs/base.yaml  # diff every cell against expected/
+python -m pytest -q                                   # 55 tests, no download
 ```
 
 The shipped body is Volve 15/9-19A, 557 core plugs, together with its expected
-output in `expected/`. The run reproduces the manuscript's Table 1 row exactly:
+output in `expected/`. The run reproduces the manuscript's Table 4 row exactly:
 
 | strategy | held-out R² | RMSE/σ | samples |
 |---|---|---|---|
@@ -125,12 +126,11 @@ With the full archives present, the other four rows are checked the same way:
 
 ```bash
 export ZEROLEAK_DATA_DIR=/path/to/archives   # layout in DATA.md
-python -m zeroleak.run --config configs/full.yaml
-python -m pytest -q                          # 40 tests, five bodies
+python -m zeroleak run --config configs/full.yaml
+python -m pytest -q                          # 65 tests, five bodies
 ```
 
-All five rows of Table 1 reproduce to the four decimals printed there, on every
-numpy version tried (2.4.4 and 2.5.3):
+All five rows of Table 4 reproduce to the four decimals printed there:
 
 | body | R² prior | R² terciles | samples |
 |---|---|---|---|
@@ -149,12 +149,61 @@ metric files rather than from memory, so an index that disagrees with its own
 predictions is not possible without the files disagreeing too.
 
 ```
-expected/
+out/base/
   volve_15_9_19a__prior.pred.csv
   volve_15_9_19a__prior.metrics.csv
   volve_15_9_19a__prior.config.json
   volve_15_9_19a__target_terciles.*
   index.csv
+```
+
+Nothing writes to `expected/`. That directory is the reference the manuscript's
+numbers were read from, produced by a tagged commit; `zeroleak verify` runs the
+configuration into `out/base/_verify` and then reports, file by file and cell by
+cell, whether the result still equals it. A pipeline that could write to its own
+reference would be checking itself against itself.
+
+## The cutpoint scan and the leave-one-body-out check
+
+The reported cutpoints are `(0.10, 0.20)`. A pair of numbers is not evidence, so
+the package can refit the model at every pair on a grid and let a reader see
+whether that pair is a point or a plateau:
+
+```bash
+python -m zeroleak scan     --config configs/full.yaml   # 951 cells, ~5 min
+python -m zeroleak scan-loo --config configs/full.yaml   # < 1 s, reads the grid
+```
+
+`scan` fixes the grid before the data are read: `phi1` in [0.05, 0.20], `phi2` in
+[0.10, 0.30], step 0.005, with `phi2 > phi1 + 0.02`, which leaves 951 evaluated
+cells. Each cell is a complete five-fold run, not a single fit: the model is
+refitted inside each training fold and scored on the held-out one, and the loss
+is `R2_own - R2_abs`, so a positive value means the absolute cutpoints are worse
+at that cell than the target's own terciles. It is single-threaded, so wall time
+follows clock speed rather than core count; about five minutes on the machine the
+paper was written on.
+
+`scan-loo` reads the grid `scan` wrote and recomputes the optimum with each body
+removed in turn, which is how Table S9 of the supplement is produced. The order
+matters and the command says so rather than guessing: run it without a grid and
+it exits with a message naming the command to run first.
+
+What `scan-loo` cannot show is worth stating in the code as well as in the paper.
+The criterion is "worst-body loss <= eps", so removing a body can only relax it
+and "is this cell still inside the window" is true by construction. The check is
+a statement about where the plateau sits and how wide it is — not about coverage.
+
+```
+<output_dir>/scan/
+  cut_scan_report.txt   the grid, the argmin, the windows, the slices, the folds
+  csv/grid_perbody.csv  951 rows x 5 bodies: the loss at every cell
+  csv/grid_worst.csv    the worst body at every cell
+  csv/slice_A.csv       phi2 fixed, phi1 swept
+  csv/slice_B.csv       phi1 fixed, phi2 swept
+  csv/robust_folds.csv  fold-offset sweep
+  csv/boot.csv          1000 paired bootstrap resamples at (0.10, 0.20)
+  csv/loo_argmin.csv    written by scan-loo
+  scan.json             the grid, the offsets, the seed, the cell count
 ```
 
 ## Why the cutpoints are a separate type
@@ -178,14 +227,17 @@ zeroleak/
   types.py          the nine carriers and the runtime guard
   config.py         one YAML, validated before anything is loaded
   strategies.py     the only place a boundary may be estimated
-  run.py            the single command
+  run.py            the default command: Table 4
+  audit.py          fold-distance audit of the shipped bodies
+  scan.py           951-cell cutpoint grid (Table 6, Fig. 5)
+  scan_loo.py       leave-one-body-out recomputation (Table S9)
   layers/           data, folds, model, metrics, report
 configs/base.yaml   shipped body
 configs/full.yaml   all five, reads $ZEROLEAK_DATA_DIR
 data/               the 557-plug Volve subset
 expected/           output of the shipped configuration
 scripts/            provenance registry: source, licence, SHA-256
-tests/              40 tests: identity, headline, sign, layers, reproduction
+tests/              59 tests: identity, headline, sign, layers, grid, reproduction
 ```
 
 ## What the package does not do

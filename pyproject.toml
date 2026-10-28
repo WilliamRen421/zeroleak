@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "zeroleak"
-version = "0.1.0"
+version = "1.1.0"
 description = "A porosity-only permeability pipeline whose information sets are visible in its call signatures"
 readme = "README.md"
 requires-python = ">=3.9"

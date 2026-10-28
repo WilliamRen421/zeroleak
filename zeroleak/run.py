@@ -23,6 +23,7 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
+from . import __version__
 from .config import BodySpec, Config, load
 from .layers import data, model, report
 from .layers import folds as folds_layer
@@ -186,9 +187,36 @@ def main(argv: List[str] = None) -> int:
     ap.add_argument("--config", required=True, help="path to the YAML configuration")
     ap.add_argument("--root", default=".", help="directory that body paths are relative to")
     ap.add_argument("--out", default=None, help="override the configured output directory")
+    ap.add_argument("--version", action="version", version=f"zeroleak {__version__}")
     args = ap.parse_args(argv)
 
-    cfg = load(args.config)
+    if not os.path.exists(args.config):
+        print(f"zeroleak: error: no configuration at {args.config!r}.\n"
+              f"  Run from the repository root and pass one of the shipped files,\n"
+              f"  --config configs/base.yaml (shipped subset) or configs/full.yaml.",
+              file=sys.stderr)
+        return 2
+    try:
+        cfg = load(args.config)
+    except ValueError as exc:
+        print(f"zeroleak: error: {exc}", file=sys.stderr)
+        return 2
+
+    # Check every input before the first one is opened, so that a missing archive
+    # is reported as such and not as whatever the reader happened to call next.
+    for spec in cfg.bodies:
+        for role, rel in (("porosity", spec.file), ("permeability", spec.perm_file)):
+            if not rel:
+                continue
+            full = rel if os.path.isabs(rel) else os.path.join(args.root, rel)
+            if not os.path.exists(full):
+                print(f"zeroleak: error: body {spec.name!r} needs its {role} file at\n"
+                      f"  {full}\n"
+                      f"  which does not exist.  DATA.md gives the source and the SHA-256 of\n"
+                      f"  each archive; configs/base.yaml runs on the shipped subset alone.",
+                      file=sys.stderr)
+                return 2
+
     out_dir = os.path.join(args.root, args.out or cfg.output_dir)
     os.makedirs(out_dir, exist_ok=True)
 

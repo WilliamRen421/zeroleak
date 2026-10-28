@@ -7,7 +7,7 @@ changing what a reader can check.
 """
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "1.1.0"
 
 from . import config, strategies, types  # noqa: F401
 from .layers import data, folds, metrics, model, report  # noqa: F401

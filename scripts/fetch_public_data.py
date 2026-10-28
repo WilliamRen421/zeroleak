@@ -94,10 +94,23 @@ def _sha256(path: str) -> str:
     return h.hexdigest()
 
 
-def _resolve(path: str, data_dir: str) -> str:
-    if "$ZEROLEAK_DATA_DIR" in path and data_dir:
-        path = path.replace("${ZEROLEAK_DATA_DIR}", data_dir)
+PLACEHOLDER = "${ZEROLEAK_DATA_DIR}"
+
+
+def _resolve(path: str, data_dir: str) -> Optional[str]:
+    """Expand the data-directory placeholder.
+
+    Returns None when the path points into $ZEROLEAK_DATA_DIR and no directory was
+    supplied, so that the caller can say so instead of reporting a file missing at
+    a path nobody could have created.
+    """
+    if PLACEHOLDER in path or "$ZEROLEAK_DATA_DIR" in path:
+        if not data_dir:
+            return None
+        path = path.replace(PLACEHOLDER, data_dir).replace("$ZEROLEAK_DATA_DIR", data_dir)
     path = os.path.expandvars(path)
+    if PLACEHOLDER in path or "$ZEROLEAK_DATA_DIR" in path:
+        return None
     return path if os.path.isabs(path) else os.path.join(ROOT, path)
 
 
@@ -105,34 +118,60 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="Document and verify the provenance of every input file.")
     ap.add_argument("--list", action="store_true", help="print the registry")
     ap.add_argument("--verify", action="store_true", help="hash the files that are present")
-    ap.add_argument("--data-dir", default=os.environ.get("ZEROLEAK_DATA_DIR", ""))
+    ap.add_argument("--data-dir", default=os.environ.get("ZEROLEAK_DATA_DIR", ""),
+                    help="where the unshipped archives are; defaults to $ZEROLEAK_DATA_DIR")
     args = ap.parse_args(argv)
 
     if not (args.list or args.verify):
         ap.print_help()
         return 0
 
-    missing = 0
-    if args.list:
-        print(f"{'body':32s}{'rows':34s}{'shipped':8s}sha256")
-        for e in REGISTRY:
-            print(f"{e['body']:32s}{e['rows']:34s}{e['shipped']:8s}{e['sha256'][:16]}...")
+    if args.verify and args.data_dir and not os.path.isdir(args.data_dir):
+        print(f"error: --data-dir {args.data_dir!r} is not a directory", file=sys.stderr)
+        return 2
 
-    if args.verify:
+    w_body = max(len(str(e["body"])) for e in REGISTRY)
+
+    if args.list:
+        print(f"{'body':{w_body}s}  {'shipped':7s}  sha256")
         for e in REGISTRY:
-            path = _resolve(e["path"], args.data_dir)
-            if not os.path.exists(path):
-                missing += 1
-                print(f"MISSING  {e['body']:32s} {e['path']}")
-                continue
-            got = _sha256(path)
-            ok = got == e["sha256"]
-            print(f"{'OK      ' if ok else 'MISMATCH'} {e['body']:32s} {os.path.basename(path)}")
-            if not ok:
-                print(f"         expected {e['sha256']}\n         got      {got}")
-        if missing:
-            print(f"\n{missing} of {len(REGISTRY)} files are not on this machine; see DATA.md.")
-    return 0
+            print(f"{e['body']:{w_body}s}  {e['shipped']:7s}  {e['sha256']}")
+            print(f"{'':{w_body}s}  rows: {e['rows']}")
+
+    if not args.verify:
+        return 0
+
+    missing = undecidable = mismatched = 0
+    for e in REGISTRY:
+        path = _resolve(e["path"], args.data_dir)
+        if path is None:
+            undecidable += 1
+            print(f"NO DIR   {e['body']:{w_body}s}  {e['path']}   (ZEROLEAK_DATA_DIR is not set)")
+            continue
+        if not os.path.exists(path):
+            missing += 1
+            print(f"MISSING  {e['body']:{w_body}s}  {path}")
+            continue
+        got = _sha256(path)
+        ok = got == e["sha256"]
+        if not ok:
+            mismatched += 1
+        print(f"{'OK      ' if ok else 'MISMATCH'} {e['body']:{w_body}s}  {os.path.basename(path)}")
+        if not ok:
+            print(f"         expected {e['sha256']}\n         got      {got}")
+
+    found = len(REGISTRY) - missing - undecidable
+    print(f"\n{found} of {len(REGISTRY)} files verified"
+          + (f", {mismatched} mismatch" + ("es" if mismatched != 1 else "") if mismatched else "")
+          + (f", {undecidable + missing} not on this machine" if (missing or undecidable) else "")
+          + ".")
+    if missing or undecidable:
+        print("Set ZEROLEAK_DATA_DIR (or pass --data-dir) to the directory holding the archives;"
+              " DATA.md gives the source, licence and checksum of each file.")
+    # A file that is absent is expected for a reader without the archives, and is
+    # reported above as such.  A file that is present and hashes differently means
+    # the pipeline is not reading the bytes this work read, which is a failure.
+    return 1 if mismatched else 0
 
 
 if __name__ == "__main__":
