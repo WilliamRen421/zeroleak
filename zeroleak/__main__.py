@@ -1,4 +1,4 @@
-"""Command line: `python -m zeroleak [run] --config ...`, `audit`, `scan`, `scan-loo`.
+"""Command line: `python -m zeroleak [run] --config ...`, `audit`, `scan`, `scan-loo`, `noise`.
 
 The default (no subcommand) is `run`, which writes the per-sample predictions and
 the per-body metrics of Table 4.  `audit` measures the folds.  `scan` evaluates
@@ -20,6 +20,7 @@ commands:
   audit     fold-distance audit of the shipped bodies
   scan      951-cell cutpoint grid, per-body losses (Table 6, Fig. 5)
   scan-loo  leave-one-body-out recomputation of that grid (Table S9)
+  noise     spread of the loss at one pair across redrawn subsamples and fold offsets
 """
 
 
@@ -46,6 +47,10 @@ def dispatch(argv=None) -> int:
         from .scan_loo import main as loo_main
 
         return loo_main(argv[1:])
+    if argv and argv[0] == "noise":
+        from .noise import main as noise_main
+
+        return noise_main(argv[1:])
     return main(argv)
 
 

@@ -36,6 +36,7 @@ import time
 import numpy as np
 
 from . import config as _config
+from .cv import cv_pred, load_bodies, r2_k, r2_log
 
 __all__ = ["main", "cutpoint_grid"]
 
@@ -84,10 +85,6 @@ def main(argv=None):
 
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
-    SPE_DIR = os.path.dirname(os.path.abspath(spec["tarbert"].file))
-    VOLVE = os.path.abspath(spec["volve_15_9_19a"].file)
-    BRENT = os.path.abspath(spec["brent_211_29"].file)
-    PIPER = os.path.abspath(spec["piper_15_17"].file)
     OUT = os.path.abspath(args.out or os.path.join(cfg.output_dir, "scan"))
     CSVD = os.path.join(OUT, "csv")
     os.makedirs(CSVD, exist_ok=True)
@@ -104,67 +101,7 @@ def main(argv=None):
         print(s, file=rep); print(s)
 
     # ------------------------------------------------------------------ data
-    def read_vals(fp, limit=None):
-        v = []
-        with open(fp) as f:
-            for line in f:
-                v.extend(float(t) for t in line.split())
-                if limit is not None and len(v) >= limit:
-                    return np.array(v[:limit])
-        return np.array(v)
-
-    def load_spe(off=0):
-        # independent rng: the subsample is identical across fold offsets, only the labels move
-        srng = np.random.default_rng(SEED)
-        NX, NY, NZ = 60, 220, 85
-        NC = NX * NY * NZ
-        phi = read_vals(os.path.join(SPE_DIR, "spe_phi.dat"), NC)
-        kx  = read_vals(os.path.join(SPE_DIR, "spe_perm.dat"), NC)
-        phi3 = phi.reshape(NZ, NY, NX); kx3 = kx.reshape(NZ, NY, NX)
-        out = {}
-        for nm, (z0, z1) in [("Tarbert", (0, 34)), ("Ness", (35, 84))]:
-            Pm = phi3[z0:z1+1]; Km = kx3[z0:z1+1]
-            zz, yy, xx = np.meshgrid(np.arange(z0, z1+1), np.arange(NY), np.arange(NX), indexing="ij")
-            m = (Pm >= PHI_LO) & (Pm <= PHI_HI) & (Km > 0)
-            p = Pm[m].astype(float); k = Km[m].astype(float)
-            x = xx[m].astype(np.int32); z = zz[m].astype(np.int32)
-            if p.size > N_SUB:
-                idx = srng.choice(p.size, N_SUB, replace=False)
-                p, k, x, z = p[idx], k[idx], x[idx], z[idx]
-            fold = np.clip((((x + off) % NX) * 5) // NX, 0, 4)
-            out[nm] = dict(phi=p, k=k, fold=fold, group=None)
-        return out
-
-    def load_volve(off=0.0):
-        p, k, d = [], [], []
-        with open(VOLVE, encoding="utf-8-sig", errors="replace") as f:
-            for r in csv.DictReader(f):
-                try:
-                    pp = float(r["CPOR"]) / 100.0; kk = float(r["CKHG"]); dd = float(r["DEPTH"])
-                except (TypeError, ValueError, KeyError):
-                    continue
-                if not (PHI_LO <= pp <= PHI_HI) or not (kk > 0):
-                    continue
-                p.append(pp); k.append(kk); d.append(dd)
-        p = np.array(p); k = np.array(k); d = np.array(d)
-        rg = d.max() - d.min() + 1e-9
-        fold = np.clip(((((d - d.min()) / rg + off) % 1.0) * 5).astype(int), 0, 4)
-        return dict(phi=p, k=k, fold=fold, group=None)
-
-    def load_field(fp, pcol, kcol, gcol, scale=100.0):
-        p, k, g = [], [], []
-        with open(fp, encoding="utf-8-sig", errors="replace") as f:
-            for r in csv.DictReader(f):
-                try:
-                    pp = float(r[pcol]) / scale; kk = float(r[kcol])
-                except (TypeError, ValueError, KeyError):
-                    continue
-                if not (PHI_LO <= pp <= PHI_HI) or not (kk > 0):
-                    continue
-                p.append(pp); k.append(kk); g.append(r[gcol].strip())
-        p = np.array(p); k = np.array(k); g = np.array(g)
-        wells = np.unique(g)
-        return dict(phi=p, k=k, fold=np.searchsorted(wells, g), group=g)
+    # the loaders and the foldwise fit live in zeroleak/cv.py, shared with `noise`
 
     P("=" * 100)
     P("Cutpoint scan: the three-phase model on the 951-cell grid")
@@ -176,11 +113,7 @@ def main(argv=None):
     P("=" * 100)
     P("")
 
-    D = {}
-    D.update(load_spe(0))
-    D["Volve"] = load_volve(0.0)
-    D["Brent"] = load_field(BRENT, "phi_pct", "kh_md", "well")
-    D["Piper"] = load_field(PIPER, "Porosity_1", "Hor_Permeability_1", "WellName")
+    D = load_bodies(cfg, SEED, 0.0)
     BODIES = ["Tarbert", "Ness", "Volve", "Brent", "Piper"]
     for nm in BODIES:
         d = D[nm]
@@ -190,52 +123,11 @@ def main(argv=None):
     P("")
 
     # ------------------------------------------------------------------ fitting core
-    def labels_of(x, th):
-        return np.clip(np.digitize(x, th), 0, len(th))
-
-    def cv_pred(phi, k, fold, th_rule, src_th=None):
-        """Point predictions in log10 space.  th_rule: 'own' | 'abs' (a pair) | 'src'."""
-        lp = np.log10(phi); lk = np.log10(k)
-        yp = np.empty_like(lk)
-        for f in np.unique(fold):
-            te = fold == f; tr = ~te
-            if tr.sum() < 30 or te.sum() == 0:
-                continue
-            if th_rule == "own":
-                th = np.unique(np.quantile(lp[tr], np.linspace(0, 1, K + 1)))[1:-1]
-            elif th_rule == "src":
-                th = src_th
-            else:
-                th = np.array([math.log10(th_rule[0]), math.log10(th_rule[1])])
-            th = np.sort(np.asarray(th, dtype=float))
-            lab_tr = labels_of(lp[tr], th); lab_te = labels_of(lp[te], th)
-            lp_te = lp[te]; pred = np.empty(int(te.sum()))
-            A = np.column_stack([np.ones(int(tr.sum())), lp[tr]])
-            coefs = []
-            for c in range(len(th) + 1):
-                mm = lab_tr == c
-                if mm.sum() >= 10:
-                    cc, *_ = np.linalg.lstsq(A[mm], lk[tr][mm], rcond=None)
-                else:
-                    cc, *_ = np.linalg.lstsq(A, lk[tr], rcond=None)
-                coefs.append(cc)
-            for c in range(len(th) + 1):
-                mm = lab_te == c
-                if mm.any():
-                    pred[mm] = coefs[c][0] + coefs[c][1] * lp_te[mm]
-            yp[te] = pred
-        return yp
-
-    def r2_log(lk, yp):
-        return float(1 - np.sum((lk - yp) ** 2) / np.sum((lk - lk.mean()) ** 2))
-
-    def r2_k(k, yp):
-        pk = 10.0 ** yp
-        return float(1 - np.sum((k - pk) ** 2) / np.sum((k - k.mean()) ** 2))
+    # labels_of / cv_pred / r2_log / r2_k are imported from zeroleak/cv.py
 
     OWN = {}
     for nm in BODIES:
-        d = D[nm]; yp = cv_pred(d["phi"], d["k"], d["fold"], "own")
+        d = D[nm]; yp = cv_pred(d["phi"], d["k"], d["fold"], "own", K)
         OWN[nm] = dict(r2_log=r2_log(np.log10(d["k"]), yp), r2_k=r2_k(d["k"], yp), yp=yp)
     P("[reference] the target's own equal-frequency terciles (own).  This locates the absolute ")
     P("cutpoints; it is not a reported result.")
@@ -259,7 +151,7 @@ def main(argv=None):
                 continue
             for nm in BODIES:
                 d = D[nm]
-                yp = cv_pred(d["phi"], d["k"], d["fold"], (a, b))
+                yp = cv_pred(d["phi"], d["k"], d["fold"], (a, b), K)
                 R2G[nm][ia, ib]  = r2_log(np.log10(d["k"]), yp)
                 R2KG[nm][ia, ib] = r2_k(d["k"], yp)
     P(f"grid done in {time.time()-t0:.1f}s")
@@ -328,7 +220,7 @@ def main(argv=None):
     def slice_loss(body, kind, x):
         d = D[body]
         th = (x, PHI2_FIX) if kind == "A" else (PHI1_FIX, x)
-        return OWN[body]["r2_log"] - r2_log(np.log10(d["k"]), cv_pred(d["phi"], d["k"], d["fold"], th))
+        return OWN[body]["r2_log"] - r2_log(np.log10(d["k"]), cv_pred(d["phi"], d["k"], d["fold"], th, K))
 
     P("=" * 100)
     P("[3] one-dimensional slices: loss L, positive = worse; the last column is the worst body")
@@ -365,15 +257,15 @@ def main(argv=None):
     ROB = []
     xsA = [float(x) for x in SA1]
     for off in offsets:
-        s = {}
-        s.update(load_spe(off)); s["Volve"] = load_volve(off / 60.0)
+        s = load_bodies(cfg, SEED, off / 60.0)
         row = []
         for x in xsA:
             vals = []
             for nm in ["Tarbert", "Ness", "Volve"]:
                 d = s[nm]
-                own = r2_log(np.log10(d["k"]), cv_pred(d["phi"], d["k"], d["fold"], "own"))
-                vals.append(own - r2_log(np.log10(d["k"]), cv_pred(d["phi"], d["k"], d["fold"], (x, PHI2_FIX))))
+                own = r2_log(np.log10(d["k"]), cv_pred(d["phi"], d["k"], d["fold"], "own", K))
+                vals.append(own - r2_log(np.log10(d["k"]),
+                                          cv_pred(d["phi"], d["k"], d["fold"], (x, PHI2_FIX), K)))
             row.append(float(max(vals)))
         ROB.append(dict(off=off, worst=row))
         kk = int(np.argmin(row))
@@ -424,7 +316,7 @@ def main(argv=None):
     BOOT = {}
     for nm in BODIES:
         d = D[nm]; lk = np.log10(d["k"])
-        ya = cv_pred(d["phi"], d["k"], d["fold"], (0.10, 0.20))
+        ya = cv_pred(d["phi"], d["k"], d["fold"], (0.10, 0.20), K)
         yo = OWN[nm]["yp"]
         n = lk.size
         delta = np.empty(NB)

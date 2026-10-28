@@ -111,7 +111,7 @@ python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on eithe
 ```bash
 python -m zeroleak run --config configs/base.yaml     # needs no download
 python -m zeroleak verify --config configs/base.yaml  # diff every cell against expected/
-python -m pytest -q                                   # 55 tests, no download
+python -m pytest -q                                   # 65 tests, no download
 ```
 
 The shipped body is Volve 15/9-19A, 557 core plugs, together with its expected
@@ -127,7 +127,7 @@ With the full archives present, the other four rows are checked the same way:
 ```bash
 export ZEROLEAK_DATA_DIR=/path/to/archives   # layout in DATA.md
 python -m zeroleak run --config configs/full.yaml
-python -m pytest -q                          # 65 tests, five bodies
+python -m pytest -q                          # 78 tests, five bodies
 ```
 
 All five rows of Table 4 reproduce to the four decimals printed there:
@@ -206,6 +206,51 @@ a statement about where the plateau sits and how wide it is — not about covera
   scan.json             the grid, the offsets, the seed, the cell count
 ```
 
+## The multi-seed check
+
+The loss at the reported pair is not a single number: which subsample of a gridded
+body is scored, and where the fold boundaries fall, are arbitrary and neither is a
+property of the rock. The supplement quotes one standard deviation of that movement,
+so the package recomputes it — at one pair, not on a grid, because a grid of standard
+deviations answers a question nobody asked:
+
+```bash
+python -m zeroleak noise --config configs/full.yaml            # 20 draws, ~15 s
+python -m zeroleak noise --config configs/base.yaml --draws 6  # 1 s, shipped body
+```
+
+Draw *i* takes subsample seed `seed + i` and fold offset *i*, so every draw redraws
+both choices at once. The offsets span **one full period of the fold partition**: the
+grid folds into five slabs of 12 columns, so a shift of 60 cells returns the same
+partition and the window is 1 to 59 cells; the cored well folds into five depth
+blocks, so the period is one fifth of the interval and the window is 0.02 to 0.21 of
+it. A window of one period is what lets twenty draws resolve the spread: sweep five
+periods instead and the offsets revisit the same partitions, which is how the same
+code reads 0.0024 or 0.0029 for Volve depending only on where the sweep starts.
+
+| body | sd of the loss | what moves it |
+|---|---|---|
+| SPE 10 Tarbert | 0.00023 | subsample (the fold offset is nearly immaterial) |
+| SPE 10 Upper Ness | 0.00014 | subsample |
+| Volve 15/9-19A | 0.00272 | fold offset (there is no subsample to draw) |
+| Brent 211/29, Piper 15/17 | fixed | folded by well: no boundary to move |
+
+The two well-folded bodies are reported as `fixed`, not as a standard deviation of
+zero. Zero would claim that the number was checked not to move; the design cannot
+support that, so the check says which three bodies it speaks for and stays quiet
+about the other two.
+
+`noise` also prints an anchor: the single-seed evaluation at the same pair, which is
+what `scan` reports and what Table 4's tercile-minus-prior difference already is. If
+the redraws did not bracket it, the two commands would not be scoring the same thing.
+
+```
+<output_dir>/noise/
+  noise_report.txt    the twenty draws, the per-body spread, the anchor
+  noise_results.json  the same numbers, plus every draw's loss
+  noise.csv           draw, seed, grid cells, depth fraction, body, loss
+```
+
 ## Why the cutpoints are a separate type
 
 `Cutpoints` has no `estimate`, `fit` or `terciles` method, so the model layer has
@@ -231,13 +276,14 @@ zeroleak/
   audit.py          fold-distance audit of the shipped bodies
   scan.py           951-cell cutpoint grid (Table 6, Fig. 5)
   scan_loo.py       leave-one-body-out recomputation (Table S9)
+  noise.py          spread of the loss over redrawn subsamples and folds (Table S7)
   layers/           data, folds, model, metrics, report
 configs/base.yaml   shipped body
 configs/full.yaml   all five, reads $ZEROLEAK_DATA_DIR
 data/               the 557-plug Volve subset
 expected/           output of the shipped configuration
 scripts/            provenance registry: source, licence, SHA-256
-tests/              59 tests: identity, headline, sign, layers, grid, reproduction
+tests/              78 tests: identity, headline, sign, layers, grid, noise, reproduction
 ```
 
 ## What the package does not do
