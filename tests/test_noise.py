@@ -16,15 +16,18 @@ import numpy as np
 import pytest
 
 from zeroleak.config import load
-from zeroleak.noise import DEPTH_FRAC, GRID_CELLS, draws_of, main
+from zeroleak.noise import (DEPTH_FRAC, GRID_CELLS, PAPER_DEPTH_OFFSETS,
+                            PAPER_GRID_OFFSETS, draws_of, main)
 
 DATA_DIR = os.environ.get("ZEROLEAK_DATA_DIR", "")
 HAS_ARCHIVES = bool(DATA_DIR) and os.path.isdir(DATA_DIR)
 needs_archives = pytest.mark.skipif(
     not HAS_ARCHIVES, reason="full archives absent; set ZEROLEAK_DATA_DIR (see DATA.md)")
 
-# The supplement's SD column, to five decimals; the main text quotes 0.0002 / 0.0027.
-PAPER = {"Tarbert": 0.000231, "Ness": 0.000137, "Volve": 0.002723}
+# The supplement's SD column, to five decimals; the main text quotes 0.0003 / 0.0002 /
+# 0.0027.  These are the values in Table S7, and the whole point of the test is that
+# the package still lands on them rather than on something of its own.
+PAPER = {"Tarbert": 0.000257, "Ness": 0.000153, "Volve": 0.002722}
 
 
 # ---------------------------------------------------------------- the schedule
@@ -33,35 +36,57 @@ def test_schedule_has_the_requested_count():
     assert len(draws_of(5, 100)) == 5
 
 
-def test_seeds_advance_by_one_from_the_configured_seed():
-    """A repeat of the base seed would re-score the same subsample twenty times."""
-    sched = draws_of(5, 20261007)
-    assert [s for _, s, _, _ in sched] == [20261007, 20261008, 20261009, 20261010, 20261011]
+def test_seeds_advance_by_a_thousand_from_the_configured_seed():
+    """Draw i uses seed + 1000(i+1), the step the published table was built with.
 
-
-def test_offsets_span_exactly_one_period_of_the_fold_partition():
-    """The window is what makes twenty draws enough, so it is asserted, not assumed.
-
-    The grid folds into five x slabs of 12 columns, so a shift of 60 cells returns the
-    same partition; the cored well folds into five depth blocks, so the period is one
-    fifth of the cored interval.  Sweeping more than one period revisits partitions
-    and the spread begins to measure the offset grid instead of the data.
+    A repeat of the base seed would re-score the same subsample twenty times, and a
+    step of one -- which is what an unexamined `seed + i` gives -- draws a different
+    twenty subsamples and moves the standard deviation by a few times 1e-5.
     """
+    sched = draws_of(20, 20261007)
+    assert [s for _, s, _, _ in sched][:3] == [20262007, 20263007, 20264007]
+    assert [s for _, s, _, _ in sched][-1] == 20281007
+    assert len({s for _, s, _, _ in sched}) == 20
+
+
+def test_the_published_offsets_are_reproduced_value_for_value():
+    """The table, not a formula that resembles it.
+
+    The supplement says the x boundaries move by 1--59 cells and the depth boundaries
+    by 0.02--0.21 of the interval.  Many twenty-point sequences satisfy that sentence;
+    only one produced the printed table, so the sequence is pinned here.
+    """
+    sched = draws_of(20, 0)
+    assert tuple(c for _, _, c, _ in sched) == PAPER_GRID_OFFSETS
+    assert tuple(f for _, _, _, f in sched) == PAPER_DEPTH_OFFSETS
+    assert min(PAPER_GRID_OFFSETS) == 1 and max(PAPER_GRID_OFFSETS) == 59
+    assert min(PAPER_DEPTH_OFFSETS) == pytest.approx(0.02)
+    assert max(PAPER_DEPTH_OFFSETS) == pytest.approx(0.21)
+
+
+def test_no_offset_lands_on_a_fold_boundary():
+    """A shift of exactly one slab width (12 columns) only relabels the bins."""
     sched = draws_of(20, 1)
-    assert sched[0][2] == GRID_CELLS[0] == 1
-    assert sched[-1][2] == GRID_CELLS[0] + GRID_CELLS[1] == 59
-    assert sched[0][3] == pytest.approx(DEPTH_FRAC[0]) == pytest.approx(0.02)
-    assert sched[-1][3] == pytest.approx(DEPTH_FRAC[0] + DEPTH_FRAC[1]) == pytest.approx(0.21)
+    assert all(c % 12 for _, _, c, _ in sched), "a multiple of 12 is the identity"
+    assert all(0 < c < 60 for _, _, c, _ in sched)
+    # 0.21 appears because the remainder lands on the period end there, which is the
+    # same position as 0.01; the table prints it as 0.21 rather than folding it back,
+    # so the assertion allows it and says why.
+    assert all(0.02 <= f <= 0.21 for _, _, _, f in sched), "one period of five depth blocks"
     assert GRID_CELLS[1] < 60, "a full 60 cells would land back on the same slabs"
-    assert DEPTH_FRAC[0] + DEPTH_FRAC[1] <= 0.2 + 0.02, "one period plus the start"
+    assert DEPTH_FRAC[1] <= 0.2 + 0.02, "one period plus the start"
 
 
-def test_both_knobs_move_monotonically():
-    sched = draws_of(20, 1)
+def test_other_draw_counts_keep_the_shape_of_the_design():
+    """Six draws should be six draws of this design, not a different experiment."""
+    sched = draws_of(6, 20261007)
+    seeds = [s for _, s, _, _ in sched]
     cells = [c for _, _, c, _ in sched]
     fracs = [f for _, _, _, f in sched]
-    assert cells == sorted(cells) and len(set(cells)) > 15
-    assert fracs == sorted(fracs) and len(set(fracs)) == 20
+    assert seeds[1] - seeds[0] == 1000
+    assert all(c % 12 for c in cells)
+    assert cells == sorted(cells) and fracs == sorted(fracs)
+    assert len(set(fracs)) == 6
 
 
 def test_one_draw_is_rejected():
@@ -153,6 +178,39 @@ def test_the_numbers_the_paper_quotes(root, tmp_path):
     for nm, expected in PAPER.items():
         got = payload["bodies"][nm]["sd"]
         assert got == pytest.approx(expected, abs=2e-6), (nm, got, expected)
+
+
+@needs_archives
+def test_the_whole_printed_table_not_just_the_sd(root, tmp_path):
+    """Mean, minimum and maximum, and the baseline column, all at four decimals.
+
+    The supplement prints five numbers per body.  Pinning only the SD would let the
+    mean drift a whole column away while the test stayed green -- and the baseline
+    column is draw one, so a wrong schedule shows up here even when the spread is
+    insensitive to it.
+    """
+    main(["--config", os.path.join(root, "configs", "full.yaml"), "--draws", "20",
+          "--out", str(tmp_path)])
+    payload = json.loads((tmp_path / "noise_results.json").read_text(encoding="utf-8"))
+    # column by column as Table S7 prints them: baseline, mean, sd, min, max
+    printed = {
+        "Tarbert": (-0.00206, -0.00183, 0.00026, -0.00224, -0.00124),
+        "Ness":    (+0.00032, +0.00056, 0.00015, +0.00024, +0.00079),
+        "Volve":   (-0.00630, -0.00632, 0.00272, -0.01328, -0.00201),
+        "Brent":   (-0.02863, -0.02863, 0.00000, -0.02863, -0.02863),
+        "Piper":   (-0.02262, -0.02262, 0.00000, -0.02262, -0.02262),
+    }
+    for nm, (base, mean, sd, lo, hi) in printed.items():
+        body = payload["bodies"][nm]
+        first = body["values"][0]
+        assert first == pytest.approx(base, abs=5e-6), (nm, "baseline", first)
+        assert body["mean"] == pytest.approx(mean, abs=5e-6), (nm, "mean", body["mean"])
+        assert body["min"] == pytest.approx(lo, abs=5e-6), (nm, "min", body["min"])
+        assert body["max"] == pytest.approx(hi, abs=5e-6), (nm, "max", body["max"])
+        if body["sd"] is not None:
+            assert body["sd"] == pytest.approx(sd, abs=5e-6), (nm, "sd", body["sd"])
+        else:
+            assert sd == 0.0 and body["n_distinct"] == 1, (nm, "printed as fixed")
 
 
 @needs_archives

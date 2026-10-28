@@ -111,7 +111,7 @@ python -m zeroleak audit --config configs/base.yaml --strict   # exit 1 on eithe
 ```bash
 python -m zeroleak run --config configs/base.yaml     # needs no download
 python -m zeroleak verify --config configs/base.yaml  # diff every cell against expected/
-python -m pytest -q                                   # 65 tests, no download
+python -m pytest -q                                   # 66 tests, no download
 ```
 
 The shipped body is Volve 15/9-19A, 557 core plugs, together with its expected
@@ -127,7 +127,7 @@ With the full archives present, the other four rows are checked the same way:
 ```bash
 export ZEROLEAK_DATA_DIR=/path/to/archives   # layout in DATA.md
 python -m zeroleak run --config configs/full.yaml
-python -m pytest -q                          # 78 tests, five bodies
+python -m pytest -q                          # 80 tests, five bodies
 ```
 
 All five rows of Table 4 reproduce to the four decimals printed there:
@@ -219,21 +219,30 @@ python -m zeroleak noise --config configs/full.yaml            # 20 draws, ~15 s
 python -m zeroleak noise --config configs/base.yaml --draws 6  # 1 s, shipped body
 ```
 
-Draw *i* takes subsample seed `seed + i` and fold offset *i*, so every draw redraws
-both choices at once. The offsets span **one full period of the fold partition**: the
-grid folds into five slabs of 12 columns, so a shift of 60 cells returns the same
-partition and the window is 1 to 59 cells; the cored well folds into five depth
-blocks, so the period is one fifth of the interval and the window is 0.02 to 0.21 of
-it. A window of one period is what lets twenty draws resolve the spread: sweep five
-periods instead and the offsets revisit the same partitions, which is how the same
-code reads 0.0024 or 0.0029 for Volve depending only on where the sweep starts.
+Draw *i* takes subsample seed `seed + 1000 (i+1)` and its own fold offset, both from a
+table in `zeroleak/noise.py`, so every draw redraws both choices at once. The offsets
+stay inside **one period of the fold partition** — the grid folds into five slabs of
+12 columns, so a shift of 60 cells returns the same partition; the cored well folds
+into five depth blocks, so the period is a fifth of the cored interval — and none of
+them is a multiple of the slab width, because such a shift only relabels the bins.
 
-| body | sd of the loss | what moves it |
-|---|---|---|
-| SPE 10 Tarbert | 0.00023 | subsample (the fold offset is nearly immaterial) |
-| SPE 10 Upper Ness | 0.00014 | subsample |
-| Volve 15/9-19A | 0.00272 | fold offset (there is no subsample to draw) |
-| Brent 211/29, Piper 15/17 | fixed | folded by well: no boundary to move |
+The twenty offsets are listed rather than generated. A sentence like "the boundaries
+move by 1--59 cells" admits many sequences of twenty points; only one of them produced
+the printed table, so the values are carried in the source. The published table
+reproduces column for column, including the baseline column, which is draw one:
+
+| body | baseline | mean | sd | min | max |
+|---|---|---|---|---|---|
+| SPE 10 Tarbert | -0.00206 | -0.00183 | 0.00026 | -0.00224 | -0.00124 |
+| SPE 10 Upper Ness | +0.00032 | +0.00056 | 0.00015 | +0.00024 | +0.00079 |
+| Volve 15/9-19A | -0.00630 | -0.00632 | 0.00272 | -0.01328 | -0.00201 |
+| Brent 211/29 | -0.02863 | -0.02863 | 0.00000 | -0.02863 | -0.02863 |
+| Piper 15/17 | -0.02262 | -0.02262 | 0.00000 | -0.02262 | -0.02262 |
+
+The two grid bodies move with the subsample and barely with the offset; the cored well
+is the other way round, having no subsample to draw. `--draws` accepts other counts,
+but any count other than twenty switches to evenly spaced offsets, and the table above
+then no longer applies.
 
 The two well-folded bodies are reported as `fixed`, not as a standard deviation of
 zero. Zero would claim that the number was checked not to move; the design cannot
@@ -283,7 +292,7 @@ configs/full.yaml   all five, reads $ZEROLEAK_DATA_DIR
 data/               the 557-plug Volve subset
 expected/           output of the shipped configuration
 scripts/            provenance registry: source, licence, SHA-256
-tests/              78 tests: identity, headline, sign, layers, grid, noise, reproduction
+tests/              80 tests: identity, headline, sign, layers, grid, noise, reproduction
 ```
 
 ## What the package does not do

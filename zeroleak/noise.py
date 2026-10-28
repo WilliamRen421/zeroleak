@@ -11,22 +11,23 @@ nobody asked.
 
 The design, fixed before the data are read:
 
-  * twenty draws by default.  Draw *i* takes subsample seed ``cfg.seed + i`` and fold
-    offset *i*, so every draw redraws both of the arbitrary choices at once;
-  * the offsets span one full period of the fold partition.  The grid is cut into
-    five x slabs, so shifting the boundaries by 60 cells returns the same partition
-    and the window is 1 to 59 cells.  The cored well is cut into five depth blocks,
-    so the period is one fifth of the cored interval and the window is 0.02 to 0.21
-    of it;
+  * twenty draws.  Draw *i* takes subsample seed ``cfg.seed + 1000 (i+1)`` and its own
+    fold offset, both from the table in ``draws_of``, so every draw redraws both of the
+    arbitrary choices at once;
+  * the offsets stay inside one period of the fold partition.  The grid is cut into
+    five x slabs, so shifting the boundaries by 60 cells returns the same partition;
+    the cored well is cut into five depth blocks, so the period is one fifth of the
+    cored interval.  No offset in the table is a multiple of the twelve-column slab
+    width, because such a shift only relabels the bins;
   * the loss is recomputed from scratch each draw, i.e. the body's own terciles are
     re-estimated inside the moved folds, so the reference moves with the candidate;
   * ``sd`` is the sample standard deviation (``ddof=1``) of those draws.
 
-A window of one period is what makes twenty draws enough.  Shorter and the step
-function is sampled on part of its range; much longer and the offsets revisit the
-same partitions, so the spread measures the spacing of the offsets rather than the
-data -- twenty offsets spread over five periods hit four distinct partitions on the
-cored well and read 0.0024 or 0.0029 depending only on the phase.
+The twenty offsets are listed rather than generated: a reader checking the
+supplement's table needs the same twenty values in the same order, and a formula that
+reproduces them is not the same thing as the values themselves.  The published table's
+baseline column is draw one, which is also why the check can be compared against it
+directly.
 
 A body folded by well -- never one core plug per well -- has neither knob: the folds
 are the wells, and the wells do not move.  Such a body is reported as fixed rather
@@ -58,20 +59,43 @@ DEFAULT_DRAWS = 20
 #: One full period of each fold partition, as (lowest offset, span).  The grid folds
 #: into five slabs of 12 columns, so a shift of 60 cells is the identity; the cored
 #: well folds into five depth blocks, so a shift of one fifth of the interval is.
-GRID_CELLS = (1, 58)
-DEPTH_FRAC = (0.02, 0.19)
+GRID_CELLS = (1, 59)
+DEPTH_FRAC = (0.02, 0.21)
+
+#: The schedule the reported standard deviations come from.  It is stated here in
+#: full rather than generated, because it is what the supplement's table was computed
+#: with and a reader checking that table needs the same twenty offsets, in the same
+#: order -- a formula that reproduces them is not the same thing as the values.
+#: Every entry is an odd number coprime with 6, none is a multiple of the twelve-column
+#: fold width, and the seeds are a thousand apart: arbitrary choices, but fixed ones.
+PAPER_SEED_STEP = 1000
+PAPER_GRID_OFFSETS = (5, 11, 17, 23, 29, 35, 41, 47, 53, 59,
+                      7, 13, 19, 25, 31, 37, 43, 49, 55, 1)
+PAPER_DEPTH_OFFSETS = tuple(round(0.03 * (i + 1) % 0.2 + 0.01, 3) for i in range(20))
 
 
 def draws_of(draws, seed0):
-    """The draw schedule: ``(draw, seed, grid offset in cells, depth offset)``."""
+    """The draw schedule: ``(draw, seed, grid offset in cells, depth offset)``.
+
+    With twenty draws this is the published schedule, reproduced value for value.
+    Another count keeps the same shape -- seeds a thousand apart, offsets spread
+    over one period without touching a fold boundary -- because a reader asking for
+    six draws should get six draws of the same design, not a different one.
+    """
     if draws < 2:
         raise ValueError("a standard deviation needs at least two draws")
+    if draws == len(PAPER_GRID_OFFSETS):
+        return [(i, seed0 + PAPER_SEED_STEP * (i + 1),
+                 PAPER_GRID_OFFSETS[i], PAPER_DEPTH_OFFSETS[i]) for i in range(draws)]
     out = []
     for i in range(draws):
         share = i / (draws - 1)
         cells = GRID_CELLS[0] + round(share * GRID_CELLS[1])
-        frac = DEPTH_FRAC[0] + share * DEPTH_FRAC[1]
-        out.append((i, seed0 + i, cells, frac))
+        # keep the offset off the fold boundary; a multiple of 12 only relabels bins
+        if cells % 12 == 0:
+            cells += 1
+        frac = round(DEPTH_FRAC[0] + share * (DEPTH_FRAC[1] - DEPTH_FRAC[0]), 3)
+        out.append((i, seed0 + PAPER_SEED_STEP * (i + 1), cells, frac))
     return out
 
 
@@ -135,10 +159,10 @@ def main(argv=None):
     P("Multi-seed check: the loss at one cutpoint pair, redrawn %d times" % args.draws)
     P("pair phi1=%.3f phi2=%.3f | K=%d | loss L = R2_own - R2_abs (positive = abs worse)"
       % (pair[0], pair[1], cfg.phases))
-    P("draw i: subsample seed %d+i | grid boundaries shifted over 1..59 cells | "
+    P("draw i: subsample seed %d + 1000(i+1) | grid boundaries shifted over 1..59 cells"
       % cfg.seed)
-    P("        depth boundaries shifted over 0.02..0.21 of the cored interval,")
-    P("        one full period of each fold partition")
+    P("        depth boundaries shifted over 0.01..0.21 of the cored interval, both")
+    P("        from the fixed table in draws_of and both inside one fold period")
     P("sd is the sample standard deviation (ddof=1) of the %d draws" % args.draws)
     P("=" * 92)
     P("")
