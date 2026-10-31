@@ -1,3 +1,8 @@
 * text=auto eol=lf
-*.csv text eol=lf
+# CSV files are data, not source: their bytes are what DATA.md and Table S1b
+# record, so git must store them exactly as read.  Converting them to LF would
+# change the SHA-256 a reader checks after downloading.
+*.csv -text
+*.dat -text
 *.pdf binary
+*.png binary
