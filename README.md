@@ -1,10 +1,10 @@
 # zeroleak
 
 > **The full run needs the external archives.** Only the Volve 15/9-19A body
-> ships in this directory; the other four need `ZEROLEAK_DATA_DIR` pointing at
-> the archives listed in `DATA.md`. The Volve body reproduces
-> `expected/volve_15_9_19a__prior.*` end to end. The six-page manual is in
-> `docs/`.
+> ships in this directory, and it ships in full; the other four need
+> `ZEROLEAK_DATA_DIR` pointing at the archives listed in `DATA.md`. The Volve
+> body reproduces `expected/volve_15_9_19a__prior.*` end to end. The six-page
+> manual is in `docs/`.
 
 A five-layer pipeline for predicting permeability from porosity alone, in which
 each layer's information set is a **type in its signature** rather than a promise
@@ -314,6 +314,29 @@ call signature, and therefore auditable by a reader who does not trust the prose
 
 ## Data and licence
 
-Code: MIT (see `LICENSE`). The shipped Volve subset is redistributed under the
-Equinor Open Data Licence; see `DATA.md` for the source, licence and SHA-256 of
-every input, and `scripts/fetch_public_data.py --verify` to check them.
+Code: MIT (see `LICENSE`). The shipped Volve body is redistributed under the
+Equinor Open Data Licence; `DATA.md` carries the source, licence and SHA-256 of
+every input, and `scripts/fetch_public_data.py --verify` checks a copy you have.
+
+| body | source | in this repository |
+|---|---|---|
+| Volve 15/9-19A | Equinor open release, CPOR / CKHG / DEPTH | **yes, in full** |
+| SPE 10 Tarbert, Upper Ness | public benchmark, Christie & Blunt (2001) | no; free to obtain |
+| Brent 211/29, Piper 15/17 | NSTA DataReleases, CGG CoreAnalysis | no; NSTA Open User Licence |
+
+**Volve ships in full.** `data/volve_15_9_19a.csv` holds every core plug inside
+the analysis window — 557 of the archive's 729 rows, the remainder falling
+outside 0.02 ≤ φ ≤ 0.45 or carrying no permeability — rather than a subsample of
+them. That is why `run`, `verify` and the 66 tests need no download.
+
+**SPE 10 is public.** Both units are distributed with the benchmark for research
+use. `scripts/fetch_public_data.py` is a registry rather than a downloader: it
+records the source, licence and SHA-256 of each file, and `--verify` re-hashes
+whatever is present. Nothing is fetched, because three of these archives are
+tens of megabytes and this repository does not mirror them.
+
+**Brent and Piper are available under the NSTA Open User Licence.** Both are
+two- and three-column projections of one CGG CoreAnalysis release published in
+the NSTA's external DataReleases; the raw Access table is not redistributed
+here. `DATA.md` gives the columns read, the rows, the SHA-256 of each extract
+and where to download it.

@@ -11,8 +11,8 @@ of the licences is ours to relax.
 | Volve 15/9-19A (full) | `volve_core_full.csv` | 557 of 729 | Equinor Volve data set | Equinor Open Data Licence | no |
 | SPE 10 Tarbert | `spe10/spe_phi.dat` + `spe_perm.dat` | 100,000 of 453,515 in window (462,000 cells) | SPE Comparative Solution Project 10, Christie & Blunt (2001) | distributed with the benchmark for research use | no |
 | SPE 10 Upper Ness | same archive, z = 35–84 | 100,000 of 613,220 in window (660,000 cells) | as above | as above | no |
-| Brent 211/29 | `brent/cgg_phik_211-29.csv` | 586, 5 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA data release terms | no |
-| Piper 15/17 | `piper/core_15-17.csv` | 4,428, 25 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA data release terms | no |
+| Brent 211/29 | `brent/cgg_phik_211-29.csv` | 586, 5 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
+| Piper 15/17 | `piper/core_15-17.csv` | 4,428, 25 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
 
 The Brent and Piper extracts are two- and three-column projections of one
 592,838-sample Access table. The raw table is not mirrored here.
