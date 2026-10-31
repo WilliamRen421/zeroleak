@@ -1,18 +1,19 @@
 # zeroleak
 
-> **Status: draft, not released.** The code runs and its tests pass, but the
-> licence, the author list, the archive DOI and the public data registry are
-> still to be settled, and the manuscript claims no repository URL. The full
-> five-body run needs `ZEROLEAK_DATA_DIR` pointing at the external archives
-> listed in `DATA.md`; only the Volve body ships with this directory.
+> **The full run needs the external archives.** Only the Volve 15/9-19A body
+> ships in this directory; the other four need `ZEROLEAK_DATA_DIR` pointing at
+> the archives listed in `DATA.md`. The Volve body reproduces
+> `expected/volve_15_9_19a__prior.*` end to end. The six-page manual is in
+> `docs/`.
 
 A five-layer pipeline for predicting permeability from porosity alone, in which
 each layer's information set is a **type in its signature** rather than a promise
 in a paper.
 
-The pipeline is the one used in the manuscript *Cutpoints transfer, intercepts do
-not: a porosity-only decomposition of cross-field permeability transfer*. It
-fits one power law per porosity phase, keeps the phase boundaries as a
+The pipeline is the one used in the manuscript *Avoiding target-information
+leakage in cross-field permeability prediction: prior phase boundaries,
+admissible parameter ranges, and decomposition of prediction transfer loss*.
+It fits one power law per porosity phase, keeps the phase boundaries as a
 configuration value, and refuses to let the model see permeability when it needs
 permeability, or to let the fold layer choose a fold using the values it will be
 tested on.

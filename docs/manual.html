@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>zeroleak 1.1.0 - reproducibility package</title>
+<style>
+  @page { size: 210mm 297mm; margin: 0; }
+
+  :root{
+    --ink:#151A1D;
+    --paper:#FAF9F6;
+    --muted:#6C7175;
+    --faint:#9AA0A4;
+    --rule:#D9D5CC;
+    --accent:#A6402A;
+    --teal:#1F5F5B;
+    --sans:"Segoe UI","Helvetica Neue",Arial,sans-serif;
+    --mono:Consolas,"Courier New",monospace;
+  }
+
+  *{ box-sizing:border-box; -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  html,body{ margin:0; padding:0; background:var(--paper); }
+  body{
+    font-family:Georgia,"Times New Roman",serif;
+    color:var(--ink); font-size:10.2pt; line-height:1.62;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .page{
+    position:relative; width:210mm; height:297mm; overflow:hidden;
+    background:var(--paper);
+    break-after:page; page-break-after:always;
+  }
+  .page:last-child{ break-after:auto; page-break-after:auto; }
+  .pad{ position:absolute; left:20mm; right:20mm; top:22mm; bottom:18mm; }
+
+  /* ---------------------------------------------------------------- type */
+  .sans{ font-family:var(--sans); }
+  .kicker{
+    font-family:var(--sans); font-size:7.6pt; font-weight:600;
+    letter-spacing:.20em; text-transform:uppercase; color:var(--accent);
+  }
+  h1,h2,h3{ margin:0; font-weight:600; }
+  h1{
+    font-family:var(--sans); font-size:19pt; line-height:1.24;
+    letter-spacing:-.012em; margin:4mm 0 5mm;
+  }
+  h2{ font-family:var(--sans); font-size:10.4pt; letter-spacing:.02em; margin:7mm 0 2mm; }
+  p{ margin:0 0 3.2mm; }
+  .lede{ font-size:11.4pt; line-height:1.58; color:#2A3134; }
+  .small{ font-size:8.6pt; line-height:1.5; color:var(--muted); }
+  .tiny{ font-size:7.6pt; line-height:1.45; color:var(--faint); }
+  em{ font-style:italic; }
+  .mono{ font-family:var(--mono); font-size:.88em; }
+
+  /* ---------------------------------------------------------------- cover */
+  .cover{ background:#141A1D; color:#F2F0EA; }
+  .cover .pad{ top:20mm; bottom:16mm; }
+
+  .art{
+    position:absolute; right:-24mm; top:125mm; width:146mm;
+    opacity:.46;
+    -webkit-mask-image:linear-gradient(to bottom right, transparent 0%, #000 46%, #000 82%, transparent 100%);
+            mask-image:linear-gradient(to bottom right, transparent 0%, #000 46%, #000 82%, transparent 100%);
+  }
+  .mark{ display:block; margin-bottom:9mm; }
+  .cover .toprow{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid rgba(242,240,234,.18); padding-bottom:3mm;
+    position:relative; z-index:2;
+  }
+  .cover .toprow .sans{
+    font-size:7.4pt; letter-spacing:.20em; text-transform:uppercase;
+    color:rgba(242,240,234,.62);
+  }
+  .cover h1{
+    font-family:var(--sans); font-size:54pt; font-weight:600;
+    letter-spacing:-.035em; line-height:1; margin:16mm 0 0;
+    color:#F7F5EF; position:relative; z-index:2;
+  }
+  .cover .sub{
+    font-size:12.6pt; line-height:1.5; color:rgba(242,240,234,.82);
+    margin:5mm 0 0; max-width:146mm; position:relative; z-index:2;
+  }
+  .cover .rule{ width:26mm; height:2px; background:#C4603F; margin:9mm 0 7mm; position:relative; z-index:2; }
+  .cover .what{
+    font-family:var(--sans); font-size:9.4pt; line-height:1.66;
+    color:rgba(242,240,234,.72); max-width:120mm; position:relative; z-index:2;
+  }
+  .cover .what b{ color:#F2F0EA; font-weight:600; }
+
+  .artnote{
+    position:absolute; left:20mm; top:166mm; width:92mm; z-index:2;
+    font-family:var(--sans); font-size:7.1pt; line-height:1.58;
+    color:rgba(242,240,234,.72);
+  }
+  .artnote b{ color:rgba(242,240,234,.95); font-weight:600; }
+
+  .colophon{
+    position:absolute; left:20mm; right:20mm; bottom:15mm;
+    display:grid; grid-template-columns:1.78fr 1fr .86fr 1fr; gap:6mm;
+    border-top:1px solid rgba(242,240,234,.18); padding-top:4.6mm; z-index:3;
+  }
+  .colophon dt{
+    font-family:var(--sans); font-size:6.7pt; letter-spacing:.18em;
+    text-transform:uppercase; color:rgba(242,240,234,.42); margin:0 0 1.6mm;
+  }
+  .colophon dd{
+    font-family:var(--sans); font-size:7.5pt; line-height:1.52;
+    margin:0; color:rgba(242,240,234,.90); white-space:nowrap;
+  }
+  .colophon dd .dim{ color:rgba(242,240,234,.42); }
+
+  /* ---------------------------------------------------------------- running head */
+  .rh{
+    display:flex; justify-content:space-between; align-items:baseline;
+    border-bottom:1px solid var(--rule); padding-bottom:2.4mm;
+    font-family:var(--sans); font-size:7.2pt; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--faint);
+  }
+  .rh b{ color:var(--ink); font-weight:600; }
+
+  .pageno{
+    position:absolute; right:20mm; bottom:9mm; z-index:5;
+    font-family:var(--sans); font-size:7pt; letter-spacing:.16em; color:var(--faint);
+  }
+
+  /* ---------------------------------------------------------------- figure */
+  figure{ margin:5mm 0 0; }
+  figure img{ display:block; width:100%; height:auto; }
+  figcaption{
+    font-family:var(--sans); font-size:7.5pt; line-height:1.52; color:var(--muted);
+    margin-top:2.4mm; padding-top:2.2mm; border-top:1px solid var(--rule);
+  }
+  figcaption b{ color:var(--ink); font-weight:600; }
+
+  /* ---------------------------------------------------------------- steps */
+  .steps{ display:grid; grid-template-columns:1fr 1fr; gap:0 9mm; margin-top:4mm; }
+  .step{ padding:3mm 0 3.4mm; border-top:1px solid var(--rule); }
+  .step .n{
+    font-family:var(--sans); font-size:7.2pt; letter-spacing:.14em;
+    color:var(--accent); font-weight:700;
+  }
+  .step h3{ font-family:var(--sans); font-size:9.2pt; margin:1mm 0 1.2mm; }
+  .step p{ font-size:8.5pt; line-height:1.48; margin:0; color:#3A4145; }
+
+  /* ---------------------------------------------------------------- table */
+  table{ width:100%; border-collapse:collapse; margin-top:2mm; }
+  caption{
+    caption-side:top; text-align:left; font-family:var(--sans);
+    font-size:7.6pt; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--faint); padding-bottom:2mm;
+  }
+  th,td{
+    font-family:var(--sans); font-size:8.4pt; padding:1.55mm 1.4mm;
+    text-align:right; border-bottom:1px solid var(--rule);
+  }
+  th{ font-weight:600; font-size:7.4pt; letter-spacing:.06em; color:var(--muted); }
+  th:first-child, td:first-child{ text-align:left; }
+  tr.lead td{ font-weight:600; }
+  td.dim{ color:var(--faint); }
+  tbody tr:last-child td{ border-bottom:1px solid var(--ink); }
+
+  /* ---------------------------------------------------------------- strip */
+  .strip{ display:grid; grid-template-columns:repeat(3,1fr); gap:7mm; margin-top:5mm; }
+  .strip .cell{ border-top:2px solid var(--ink); padding-top:2.6mm; }
+  .strip .v{
+    font-family:var(--sans); font-size:17pt; font-weight:600;
+    letter-spacing:-.02em; line-height:1.1;
+  }
+  .strip .l{ font-family:var(--sans); font-size:7.6pt; line-height:1.45; color:var(--muted); margin-top:1.6mm; }
+
+  /* ---------------------------------------------------------------- KPI */
+  .kpis{ display:grid; grid-template-columns:repeat(3,1fr); gap:6mm; margin:5mm 0 0; }
+  .kpi{ border-top:2px solid var(--ink); padding-top:2.6mm; }
+  .kpi .v{
+    font-family:var(--sans); font-size:23pt; font-weight:600;
+    letter-spacing:-.02em; line-height:1;
+  }
+  .kpi .l{ font-family:var(--sans); font-size:7.6pt; line-height:1.45; color:var(--muted); margin-top:1.8mm; }
+
+  /* ---------------------------------------------------------------- code */
+  pre{
+    font-family:var(--mono); font-size:8.1pt; line-height:1.6;
+    background:#F1EFE9; border-left:2px solid var(--teal);
+    padding:3.4mm 4mm; margin:3mm 0 0; white-space:pre;
+    color:#20272A; overflow:hidden;
+  }
+  pre .c{ color:#8A9094; }
+  pre .t{ color:var(--teal); }
+
+  /* ---------------------------------------------------------------- files */
+  .files{ margin-top:4mm; }
+  .file{
+    display:grid; grid-template-columns:46mm 1fr; gap:5mm;
+    padding:2.6mm 0; border-top:1px solid var(--rule); align-items:baseline;
+  }
+  .file .nm{ font-family:var(--mono); font-size:8.1pt; color:var(--teal); }
+  .file .ds{ font-size:8.3pt; line-height:1.45; color:#3A4145; }
+
+  .cite{ margin-top:4.5mm; border:1px solid var(--rule); background:#F4F2EC; padding:3.6mm 4.6mm; }
+  .cite .kicker{ color:var(--teal); margin-bottom:2mm; }
+  .cite pre{ background:transparent; border:0; padding:0; margin:0; font-size:7.8pt; line-height:1.55; }
+
+  .note{
+    margin-top:4mm; padding-left:4mm; border-left:2px solid var(--accent);
+    font-size:8.6pt; line-height:1.55; color:#3A4145;
+  }
+
+  /* ---------------------------------------------------------------- not-list */
+  .pull{
+    margin:14mm 0 0; padding:0 0 0 6mm; border-left:2px solid var(--accent);
+    font-size:13.6pt; line-height:1.52; color:#2A3134; font-style:italic;
+  }
+  .pull .who{
+    display:block; margin-top:3mm; font-family:var(--sans); font-style:normal;
+    font-size:7.6pt; letter-spacing:.14em; text-transform:uppercase; color:var(--faint);
+  }
+
+  .nots{ display:grid; grid-template-columns:repeat(3,1fr); gap:7mm; margin-top:6mm; }
+  .nots .c{ border-top:1px solid var(--rule); padding-top:2.4mm; }
+  .nots .h{
+    font-family:var(--sans); font-size:7.4pt; letter-spacing:.13em;
+    text-transform:uppercase; color:var(--accent); margin-bottom:1.4mm;
+  }
+  .nots p{ font-size:8.4pt; line-height:1.46; margin:0; color:#3A4145; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================ 1 · COVER -->
+<section class="page cover">
+  <svg class="art" viewBox="0 0 480 200" fill="none" aria-hidden="true">
+    <!-- the loss surface, drawn as contours: two nested levels, a star at the
+         minimax point and an open circle at the fixed pair -->
+    <g stroke="#C4603F" stroke-width="1.1" opacity=".30">
+      <path d="M30 178 H470"/>
+      <path d="M30 178 V22"/>
+      <path d="M30 128 H470" stroke-dasharray="2 6"/>
+      <path d="M148 22 V178" stroke-dasharray="2 6" opacity=".7"/>
+    </g>
+    <path d="M96 128 C86 76 168 40 244 44 C324 48 384 76 378 116
+             C372 156 296 168 214 162 C150 157 106 152 96 128 Z"
+          stroke="#C4603F" stroke-width="1.5" opacity=".38" stroke-dasharray="8 6"/>
+    <path d="M188 122 C180 92 226 74 266 78 C308 82 336 102 332 120
+             C328 140 282 146 244 142 C208 138 194 136 188 122 Z"
+          stroke="#C4603F" stroke-width="1.6" opacity=".72"/>
+    <g transform="translate(262,100) scale(.58) translate(-262,-100)">
+      <path d="M262 92 l4.4 9.6 10.4 1.2 -7.8 7.2 2.1 10.4 -9.1 -5.1 -9.1 5.1 2.1 -10.4 -7.8 -7.2 10.4 -1.2 Z"
+            fill="#F2F0EA" opacity=".90"/>
+    </g>
+    <circle cx="222" cy="118" r="3.6" stroke="#F2F0EA" stroke-width="1.5" opacity=".55"/>
+    <path d="M96 128 C110 150 190 164 262 160 C330 156 372 146 378 116"
+          stroke="#F2F0EA" stroke-width="1" opacity=".22"/>
+  </svg>
+  <div class="pad">
+
+    <svg class="mark" width="96" height="38" viewBox="0 0 96 38" fill="none">
+      <path d="M3 32 L31 19" stroke="#C4603F" stroke-width="2.4"/>
+      <path d="M34 17.6 L62 9.4" stroke="#C4603F" stroke-width="2.4" opacity=".70"/>
+      <path d="M65 8 L93 2" stroke="#C4603F" stroke-width="2.4" opacity=".40"/>
+      <circle cx="32.2" cy="18.4" r="3.2" fill="#F2F0EA"/>
+      <circle cx="63.2" cy="9.0" r="3.2" fill="#F2F0EA"/>
+    </svg>
+
+    <div class="toprow">
+      <span class="sans">Reproducibility package</span>
+      <span class="sans">Version 1.1.0 &nbsp;·&nbsp; 28 October 2026</span>
+    </div>
+
+    <h1>zeroleak</h1>
+
+    <p class="sub">Permeability from porosity in three phases, with the phase
+    boundaries fixed in advance and never fitted.</p>
+
+    <div class="rule"></div>
+
+    <p class="what">
+      Five public bodies, one of which ships with the package. One power law per porosity phase,
+      six free parameters, and a baseline that does not read the answer it is scored
+      against. <b>The package reproduces every number the paper prints</b>, down to the
+      last digit, from the archives or from the one body that ships with it.
+    </p>
+
+    <div class="artnote">
+      <b>The surface behind the fixed pair.</b> Worst-body loss over all 951 evaluated
+      cutpoint pairs; the star marks the minimax pair (0.110, 0.200), the open circle the
+      pair that ships (0.10, 0.20). The two differ by 0.0009 in R².
+    </div>
+
+    <dl class="colophon">
+      <div>
+        <dt>Bodies</dt>
+        <dd>SPE 10 Tarbert · Upper Ness<br>Volve 15/9-19A<br>Brent 211/29 · Piper 15/17</dd>
+      </div>
+      <div>
+        <dt>Contents</dt>
+        <dd>Source · tests<br>reference outputs<br><span class="dim">80 tests · 951 cells</span></dd>
+      </div>
+      <div>
+        <dt>Licence</dt>
+        <dd>MIT <span class="dim">(code)</span><br>CC BY 4.0 <span class="dim">(data)</span></dd>
+      </div>
+      <div>
+        <dt>DOI</dt>
+        <dd>10.5281/zenodo.XXXXXXX<br><span class="dim">to be minted</span></dd>
+      </div>
+    </dl>
+
+  </div>
+</section>
+
+<!-- ============================================================ 2 · WHY -->
+<section class="page">
+  <div class="pad">
+    <div class="rh"><span><b>1 · Why</b></span><span>zeroleak 1.1.0</span></div>
+
+    <h1>A cutpoint you never fit, and a baseline that never reads the answer.</h1>
+
+    <p class="lede">Most permeability correlations are scored against a baseline built from
+    the very quantity being predicted. The usual one is the flow zone index, and it cannot
+    be computed without <em>k</em>.</p>
+
+    <p>The flow zone index is <span class="mono">RQI / &phi;<sub>z</sub></span> with
+    <span class="mono">RQI = 0.0314 &radic;(k / &phi;)</span>. It is a genuinely useful
+    grouping variable, and it is also a function of the target. Any accuracy advantage it
+    shows over a porosity-only model is therefore not evidence about prediction: the
+    information was supplied rather than inferred. Here the baseline sees porosity and
+    nothing else, and the three phase boundaries sit at fixed porosities — 0.10 and 0.20 —
+    chosen before any body is scored and never re-optimised inside the folds.</p>
+
+    <p>What remains is a deliberately small model: three phases, one power law in each,
+    six free parameters, fitted by ordinary least squares in log space. Its job is not to
+    win a leaderboard. It exists so that a claim about transferability can be stated
+    without the target leaking into the thing that measures it.</p>
+
+    <figure>
+      <img src="assets/fig_clouds.png" alt="Porosity-permeability clouds for five bodies with three phases and phase mass">
+      <figcaption><b>Five bodies, one protocol.</b> Panels (a)–(e): core-plug porosity against
+      permeability, split at the fixed porosities &phi; = 0.10 and 0.20 (dotted), with the
+      per-phase power law fitted inside each band. Panel (f): how the samples distribute
+      across the three phases — equal-frequency in the paper's own parameterisation, and
+      visibly uneven in &phi; on the multi-well fields.</figcaption>
+    </figure>
+
+    <div class="nots">
+      <div class="c">
+        <div class="h">Not a classifier</div>
+        <p>No hydraulic flow units are assigned, and no rock type is named. The phases are
+        porosity intervals, nothing more.</p>
+      </div>
+      <div class="c">
+        <div class="h">Not a ranking claim</div>
+        <p>R² in <em>k</em> space is reported as a diagnostic. It is not used to order the
+        five bodies against each other.</p>
+      </div>
+      <div class="c">
+        <div class="h">Not a substitute</div>
+        <p>Nothing here replaces core description. The model says what porosity alone
+        carries, and stops there.</p>
+      </div>
+    </div>
+
+  </div>
+  <div class="pageno">2 / 6</div>
+</section>
+
+<!-- ============================================================ 3 · PROTOCOL -->
+<section class="page">
+  <div class="pad">
+    <div class="rh"><span><b>2 · The protocol</b></span><span>zeroleak 1.1.0</span></div>
+
+    <h1>Four decisions, each with a stated information set.</h1>
+
+    <p class="lede">The model is small because the protocol forbids it from being larger.
+    Each step below names what it is allowed to read, and the last panel names the
+    alternatives that were rejected on that basis alone.</p>
+
+    <figure style="margin-top:6mm">
+      <img src="assets/fig_protocol-1.png" alt="Four-step protocol with the information set read at each step, and the rejected alternatives">
+      <figcaption><b>Bounds, coefficients, folds, an interval.</b> The bottom panel is the
+      part that matters: target terciles need the target's own porosity distribution,
+      source terciles cost up to 0.0776 in log-space R², and the flow-zone-index family
+      reads k, which is unobservable where k is unknown.</figcaption>
+    </figure>
+
+    <p>Two consequences follow, and they are worth stating plainly because both are easy to
+    read as a weakness. First, <b>the cutpoints are not estimated</b>: they are fixed at
+    0.10 and 0.20 from a porosity-quality scale, before any body is scored, so no fold can
+    tune them. Second, <b>the contribution is a range, not a point</b>: at a tolerance of
+    0.005 in loss, the admissible lower cutpoint spans &phi;<sub>1</sub> &isin; [0.09, 0.14].
+    A paper that reported a single optimum would be claiming a precision this design cannot
+    defend.</p>
+
+    <p>The last line of the figure is the one a practitioner cares about: a new field needs
+    no permeability map, but it does need six coefficients from a few cored plugs. That is
+    the whole deployment story, and it is deliberately modest.</p>
+
+    <blockquote class="pull">
+      Nothing here is fitted that could have been fixed, and nothing is fixed that the data
+      could have decided.
+      <span class="who">The design rule, in one sentence</span>
+    </blockquote>
+
+  </div>
+  <div class="pageno">3 / 6</div>
+</section>
+
+<!-- ============================================================ 4 · RESULTS -->
+<section class="page">
+  <div class="pad">
+    <div class="rh"><span><b>3 · What it produces</b></span><span>zeroleak 1.1.0</span></div>
+
+    <h1>Six coefficients per body, and the surface behind the cutpoints.</h1>
+
+    <table>
+      <caption>Leave-one-fold-out R²(log<sub>10</sub> k), shipped configuration</caption>
+      <thead>
+        <tr>
+          <th>Body</th><th>n</th><th>Prior 0.10/0.20</th><th>Terciles fitted</th>
+          <th>RMSE / &sigma;</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="lead"><td>SPE 10 Tarbert</td><td>100 000</td><td>0.7355</td><td>0.7336</td><td>0.5143</td></tr>
+        <tr class="lead"><td>SPE 10 Upper Ness</td><td>100 000</td><td>0.6634</td><td>0.6641</td><td>0.5802</td></tr>
+        <tr class="lead"><td>Volve 15/9-19A</td><td>557</td><td>0.7207</td><td>0.7145</td><td>0.5285</td></tr>
+        <tr class="lead"><td>Brent 211/29</td><td>586</td><td>0.7430</td><td>0.7143</td><td>0.5070</td></tr>
+        <tr class="lead"><td>Piper 15/17</td><td>4 428</td><td>0.4868</td><td>0.4642</td><td>0.7164</td></tr>
+      </tbody>
+    </table>
+    <p class="tiny" style="margin-top:2.5mm">The two grid bodies are scored on a fixed
+    100 000-point subsample. Columns three and four differ by at most 0.029 — fitting the
+    boundaries buys almost nothing, so fixing them costs almost nothing.</p>
+
+    <figure style="margin-top:6mm">
+      <img src="assets/fig2_scan.png" alt="Worst-body loss surface over 951 cutpoint pairs and a slice at the second cutpoint">
+      <figcaption><b>Why the pair survives being questioned.</b> Left: worst-body loss over
+      all 951 evaluated pairs. Right: a slice at &phi;<sub>2</sub> = 0.20, with the
+      &epsilon; = 0.005 band shaded — the admissible window is an interval, and the reported
+      pair sits inside it rather than at a sharp optimum.</figcaption>
+    </figure>
+
+    <div class="strip">
+      <div class="cell">
+        <div class="v">951</div>
+        <div class="l">pairs searched, K fixed at 3, six parameters throughout</div>
+      </div>
+      <div class="cell">
+        <div class="v">0.110 · 0.200</div>
+        <div class="l">where the worst body is least bad (L = −0.00018)</div>
+      </div>
+      <div class="cell">
+        <div class="v">+0.0009</div>
+        <div class="l">what the fixed pair gives up there, in R²</div>
+      </div>
+    </div>
+
+  </div>
+  <div class="pageno">4 / 6</div>
+</section>
+
+<!-- ============================================================ 4 · CHECK -->
+<section class="page">
+  <div class="pad">
+    <div class="rh"><span><b>4 · What you can check</b></span><span>zeroleak 1.1.0</span></div>
+
+    <h1>Every number in the paper has a command behind it.</h1>
+
+    <p class="lede">Three claims are load-bearing, and each is one run away. None of them
+    requires the full archives.</p>
+
+    <div class="kpis">
+      <div class="kpi">
+        <div class="v">10 / 10</div>
+        <div class="l">Table values reproduced to four decimals, five bodies × two
+        strategies, in a three-second run.</div>
+      </div>
+      <div class="kpi">
+        <div class="v">0.00e+00</div>
+        <div class="l">Largest disagreement with the archived twenty-draw set, across 100
+        individual losses.</div>
+      </div>
+      <div class="kpi">
+        <div class="v">557</div>
+        <div class="l">Predictions compared cell by cell by <span class="mono">verify</span>,
+        not a summary statistic standing in for them.</div>
+      </div>
+    </div>
+
+    <h2>The body that ships with the package</h2>
+
+    <p>Volve 15/9-19A comes with the code: 557 core plugs, full input, so the whole chain
+    runs on a clean machine with no download and no credentials. The other four are other
+    people's data and need the archives described in <span class="mono">DATA.md</span>;
+    none of them is redistributed here.</p>
+
+    <pre><span class="c">$ python -m zeroleak verify --config configs/base.yaml</span>
+<span class="c"># 557 predictions scored first, then one line per reference file</span>
+file                                            status  detail
+index.csv                                       ok
+volve_15_9_19a__prior.config.json               ok
+volve_15_9_19a__prior.metrics.csv               ok
+volve_15_9_19a__prior.pred.csv                  ok
+<span class="c">... three more, then</span>
+<span class="t">verify: all files match expected/</span></pre>
+
+    <div class="note">
+      <b>What the check refuses to claim.</b> Brent 211/29 and Piper 15/17 are folded by
+      well, so there is no boundary to redraw; they are reported as <em>fixed</em> rather
+      than as a standard deviation of zero. The check speaks for three bodies out of five,
+      and says so in its own output.
+    </div>
+
+    <h2>Spread of the loss at the reported pair</h2>
+    <p>Twenty draws, each with its own subsample seed and fold offset. The offsets are
+    listed in the source rather than generated, because the sentence “the boundaries move
+    by 1–59 cells” admits many sequences of twenty points, and only one of them produced
+    the printed table.</p>
+
+    <table>
+      <thead>
+        <tr><th>Body</th><th>Baseline</th><th>Mean</th><th>SD</th><th>Min</th><th>Max</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>SPE 10 Tarbert</td><td>−0.00206</td><td>−0.00183</td><td>0.00026</td><td>−0.00224</td><td>−0.00124</td></tr>
+        <tr><td>SPE 10 Upper Ness</td><td>+0.00032</td><td>+0.00056</td><td>0.00015</td><td>+0.00024</td><td>+0.00079</td></tr>
+        <tr><td>Volve 15/9-19A</td><td>−0.00630</td><td>−0.00632</td><td>0.00272</td><td>−0.01328</td><td>−0.00201</td></tr>
+        <tr><td>Brent · Piper</td><td class="dim">−0.02863 · −0.02262</td><td class="dim">unchanged</td><td>fixed</td><td class="dim">unchanged</td><td class="dim">unchanged</td></tr>
+      </tbody>
+    </table>
+
+  </div>
+  <div class="pageno">5 / 6</div>
+</section>
+
+<!-- ============================================================ 5 · USE -->
+<section class="page">
+  <div class="pad">
+    <div class="rh"><span><b>5 · Running it</b></span><span>zeroleak 1.1.0</span></div>
+
+    <h1>Four commands, and a check that can fail.</h1>
+
+    <pre><span class="c"># Python 3.11 · numpy 2.4.4 · nothing below needs the network</span>
+<span class="c"># run from inside zeroleak-1.1.0/, the directory the archive unpacks to</span>
+pip install -e ".[test]"
+
+<span class="c"># reproduces the table from the body that ships with the package</span>
+python -m zeroleak run    --config configs/base.yaml
+<span class="c"># the same, then a cell-by-cell diff against the reference output</span>
+python -m zeroleak verify --config configs/base.yaml
+
+<span class="c"># all five bodies (~3 s), the 951-cell scan (~140 s), twenty draws (~15 s)</span>
+export ZEROLEAK_DATA_DIR=/path/to/archives   <span class="c"># layout in DATA.md</span>
+python -m zeroleak run     --config configs/full.yaml
+python -m zeroleak scan    --config configs/full.yaml
+python -m zeroleak noise   --config configs/full.yaml
+python -m pytest -q                          <span class="c"># 80 tests</span></pre>
+
+    <h2>What is in the archive</h2>
+
+    <div class="files">
+      <div class="file">
+        <div class="nm">zeroleak-1.1.0.zip</div>
+        <div class="ds">Source, tests, both configurations, the shipped body, the reference
+        outputs and this manual. Unzips to a directory that installs with one command.</div>
+      </div>
+      <div class="file">
+        <div class="nm">zeroleak-1.1.0-manual.pdf</div>
+        <div class="ds">This document — the version to read before unzipping anything.</div>
+      </div>
+      <div class="file">
+        <div class="nm">zeroleak-1.1.0-README.md</div>
+        <div class="ds">The same instructions as plain text, for reading in the browser without
+        downloading anything.</div>
+      </div>
+    </div>
+
+    <h2>Why the tests are worth something</h2>
+    <p>Eighty of them, and the interesting ones are the ones that must fail: the verifier is
+    handed an altered reference and required to exit non-zero, and the loss sign is reversed
+    to confirm a named assertion breaks. A checker that can only print <span class="mono">ok</span>
+    moves the burden of proof onto the reader without giving them anything to push against.</p>
+
+    <div class="cite">
+      <div class="kicker">Cite this package</div>
+      <pre>@software{zeroleak_2026,
+  title     = {zeroleak: permeability from porosity in three phases,
+               with fixed cutpoints},
+  version   = {1.1.0},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.XXXXXXX}
+}</pre>
+    </div>
+
+  </div>
+  <div class="pageno">6 / 6</div>
+</section>
+
+</body>
+</html>
