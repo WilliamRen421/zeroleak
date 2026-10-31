@@ -550,7 +550,7 @@ python -m zeroleak run    --config configs/base.yaml
 <span class="c"># the same, then a cell-by-cell diff against the reference output</span>
 python -m zeroleak verify --config configs/base.yaml
 
-<span class="c"># all five bodies (~3 s), the 951-cell scan (~140 s), twenty draws (~15 s)</span>
+<span class="c"># all five bodies (~5 s), the 951-cell scan (~3.5 min), twenty draws (~25 s)</span>
 export ZEROLEAK_DATA_DIR=/path/to/archives   <span class="c"># layout in DATA.md</span>
 python -m zeroleak run     --config configs/full.yaml
 python -m zeroleak scan    --config configs/full.yaml

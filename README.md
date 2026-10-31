@@ -179,7 +179,7 @@ the package can refit the model at every pair on a grid and let a reader see
 whether that pair is a point or a plateau:
 
 ```bash
-python -m zeroleak scan     --config configs/full.yaml   # 951 cells, ~5 min
+python -m zeroleak scan     --config configs/full.yaml   # 951 cells, ~3.5 min
 python -m zeroleak scan-loo --config configs/full.yaml   # < 1 s, reads the grid
 ```
 
@@ -224,7 +224,7 @@ so the package recomputes it — at one pair, not on a grid, because a grid of s
 deviations answers a question nobody asked:
 
 ```bash
-python -m zeroleak noise --config configs/full.yaml            # 20 draws, ~15 s
+python -m zeroleak noise --config configs/full.yaml            # 20 draws, ~25 s
 python -m zeroleak noise --config configs/base.yaml --draws 6  # 1 s, shipped body
 ```
 
