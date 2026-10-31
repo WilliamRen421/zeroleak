@@ -201,10 +201,17 @@ def optimism(
     rows = []
     for rule in rules:
         r2_by_seed, delta_by_seed = [], []
+        first_folds = None
         for seed in seeds[:max(1, n_seeds)]:
             folds = folds_layer.assign_folds(
                 body.phi, body.groups, rule=rule, n_blocks=n_blocks, seed=seed
             )
+            # The geometry columns describe one assignment, so they come from the
+            # first seed, the one a plain `audit` run uses.  Taking them from the
+            # last seed instead would move `within 1` whenever --seeds changed the
+            # count, and the table would disagree with the default run.
+            if first_folds is None:
+                first_folds = folds
             r2 = {s: _cv_r2(body, cfg, folds, s) for s in cfg.strategies}
             if "prior" not in r2 or "target_terciles" not in r2:
                 raise ValueError("the audit compares 'prior' with 'target_terciles'")
@@ -214,7 +221,7 @@ def optimism(
             "body": spec.name,
             "rule": rule,
             "n_blocks": int(n_blocks),
-            **geometry(g, folds.x),
+            **geometry(g, first_folds.x),
             "r2": r2_by_seed[0],
             "delta": delta_by_seed[0],
             "n_seeds": len(seeds[:max(1, n_seeds)]),
@@ -230,21 +237,26 @@ def optimism(
 
 def _table(rows: List[Dict]) -> str:
     multi = rows[0].get("n_seeds", 1) > 1
+    pw = 23 if multi else 10
     head = (
         f"{'rule':<14s}{'nn p50':>9s}{'x spacing':>11s}{'within 1':>10s}"
-        f"{'R2 prior':>10s}{'R2 terc':>9s}"
-        f"{'delta' if not multi else 'delta (seed range)':>24s}   verdict"
+        f"{'R2 prior (seeds)' if multi else 'R2 prior':>{pw}s}"
+        f"{'R2 terc':>9s}"
+        f"{'delta (seed range)' if multi else 'delta':>24s}   verdict"
     )
     lines = [head, "-" * len(head)]
     for r in rows:
         if multi:
             lo, hi = r["delta_range"]
             d = f"  {r['delta']:+.4f}  [{lo:+.4f},{hi:+.4f}]"
+            plo, phi = r["r2_prior_range"]
+            p = f"{plo:.4f}-{phi:.4f}"
         else:
             d = f"  {r['delta']:+.4f}"
+            p = f"{r['r2']['prior']:.4f}"
         lines.append(
             f"{r['rule']:<14s}{r['nn_p50']:>8.3f}m{r['ratio_p50']:>11.1f}"
-            f"{r['within_1_spacing']:>10.2f}{r['r2']['prior']:>10.4f}"
+            f"{100.0 * r['within_1_spacing']:>9.1f}%{p:>{pw}s}"
             f"{r['r2']['target_terciles']:>9.4f}{d:>24s}   {r['verdict']}"
         )
     return "\n".join(lines)

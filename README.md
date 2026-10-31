@@ -93,7 +93,10 @@ adjacent samples:
 |---|---|---|---|---|---|---|
 | `depth_block` | 44.0 spacings | 0.7% | 0.7207 | 0.7145 | +0.0062 | blocked |
 | `index_block` | 42.0 spacings | 1.1% | 0.7069 | 0.7029 | +0.0040 | blocked |
-| `random_block` | 1.0 spacings | 88% | 0.724–0.734 | 0.7317 | +0.0002…+0.0054 | **interpolation** |
+| `random_block` | 1.0 spacings | 86.0% | 0.724–0.734 | 0.7317 | +0.0002…+0.0054 | **interpolation** |
+
+The geometry columns come from the default assignment, so they read the same
+with or without `--seeds`; only the two right-hand columns open into ranges.
 
 The last row is the one to read. It is admitted by every layer — the same
 `FoldLabels`, the same signature — and it shrinks the cutpoint difference the
@@ -117,7 +120,7 @@ and a shell sitting one level up reports that there is nothing to install.
 pip install -e ".[test]"                              # Python 3.11, numpy 2.4.4
 python -m zeroleak run --config configs/base.yaml     # needs no download
 python -m zeroleak verify --config configs/base.yaml  # diff every cell against expected/
-python -m pytest -q                                   # 66 tests, no download
+python -m pytest                                      # 66 passed, 14 skipped without the archives
 ```
 
 The shipped body is Volve 15/9-19A, 557 core plugs, together with its expected
@@ -133,7 +136,7 @@ With the full archives present, the other four rows are checked the same way:
 ```bash
 export ZEROLEAK_DATA_DIR=/path/to/archives   # layout in DATA.md
 python -m zeroleak run --config configs/full.yaml
-python -m pytest -q                          # 80 tests, five bodies
+python -m pytest                             # 80 passed, five bodies
 ```
 
 All five rows of Table 4 reproduce to the four decimals printed there:
@@ -327,7 +330,7 @@ every input, and `scripts/fetch_public_data.py --verify` checks a copy you have.
 **Volve ships in full.** `data/volve_15_9_19a.csv` holds every core plug inside
 the analysis window — 557 of the archive's 729 rows, the remainder falling
 outside 0.02 ≤ φ ≤ 0.45 or carrying no permeability — rather than a subsample of
-them. That is why `run`, `verify` and the 66 tests need no download.
+them. That is why `run`, `verify` and 66 of the 80 tests need no download.
 
 **SPE 10 is public.** Both units are distributed with the benchmark for research
 use. `scripts/fetch_public_data.py` is a registry rather than a downloader: it
