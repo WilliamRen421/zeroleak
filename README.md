@@ -153,9 +153,10 @@ All five rows of Table 4 reproduce to the four decimals printed there:
 
 For each body and strategy: a CSV of per-sample predictions, a CSV of summary
 metrics, and a JSON record of the configuration, the data file's SHA-256, the
-numpy version and the git commit. Then `index.csv`, rebuilt from the exported
-metric files rather than from memory, so an index that disagrees with its own
-predictions is not possible without the files disagreeing too.
+numpy version and the commit it ran from, as `git describe --tags --always`
+reports it. Then `index.csv`, rebuilt from the exported metric files rather
+than from memory, so an index that disagrees with its own predictions is not
+possible without the files disagreeing too.
 
 ```
 out/base/
@@ -204,15 +205,18 @@ a statement about where the plateau sits and how wide it is — not about covera
 
 ```
 <output_dir>/scan/
-  cut_scan_report.txt   the grid, the argmin, the windows, the slices, the folds
-  csv/grid_perbody.csv  951 rows x 5 bodies: the loss at every cell
-  csv/grid_worst.csv    the worst body at every cell
-  csv/slice_A.csv       phi2 fixed, phi1 swept
-  csv/slice_B.csv       phi1 fixed, phi2 swept
-  csv/robust_folds.csv  fold-offset sweep
-  csv/boot.csv          1000 paired bootstrap resamples at (0.10, 0.20)
-  csv/loo_argmin.csv    written by scan-loo
-  scan.json             the grid, the offsets, the seed, the cell count
+  cut_scan_report.txt    the grid, the argmin, the windows, the slices, the folds
+  cut_scan_results.json  the same numbers as arrays: grid, offsets, seed, cell count
+  cut_scan_tables.md     the cells laid out as markdown tables
+  csv/grid_perbody.csv   4,755 rows: the loss at each of 951 cells, one row per body
+  csv/grid_worst.csv     the worst body at every cell
+  csv/slice_A.csv        phi2 fixed, phi1 swept
+  csv/slice_B.csv        phi1 fixed, phi2 swept
+  csv/robust_folds.csv   fold-offset sweep
+  csv/boot.csv           one row per body: L, 95% CI, P(L>0) from 1000 resamples
+  csv/loo_argmin.csv     written by scan-loo, one row per left-out body
+  csv/loo_argmin.json    the same rows, with the tolerances and the windows
+  loo_argmin.txt         the report scan-loo prints
 ```
 
 ## The multi-seed check
@@ -238,7 +242,7 @@ them is a multiple of the slab width, because such a shift only relabels the bin
 The twenty offsets are listed rather than generated. A sentence like "the boundaries
 move by 1--59 cells" admits many sequences of twenty points; only one of them produced
 the printed table, so the values are carried in the source. The published table
-reproduces column for column, including the baseline column, which is draw one:
+reproduces column for column, including the baseline column, which is draw 0:
 
 | body | baseline | mean | sd | min | max |
 |---|---|---|---|---|---|
@@ -328,7 +332,7 @@ every input, and `scripts/fetch_public_data.py --verify` checks a copy you have.
 | Brent 211/29, Piper 15/17 | NSTA DataReleases, CGG CoreAnalysis | no; NSTA Open User Licence |
 
 **Volve ships in full.** `data/volve_15_9_19a.csv` holds every core plug inside
-the analysis window — 557 of the archive's 729 rows, the remainder falling
+the analysis window — 557 of the archive's 728 rows, the remainder falling
 outside 0.02 ≤ φ ≤ 0.45 or carrying no permeability — rather than a subsample of
 them. That is why `run`, `verify` and 66 of the 80 tests need no download.
 

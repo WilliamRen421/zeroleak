@@ -41,7 +41,7 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
     {
         "body": "Volve 15/9-19A (full core table)",
         "path": "${ZEROLEAK_DATA_DIR}/volve_core_full.csv",
-        "rows": "729 raw, 557 in window",
+        "rows": "728 raw, 557 in window",
         "source": "Equinor Volve data set, core analysis export",
         "licence": "Equinor Open Data Licence",
         "url": "https://www.equinor.com/energy/volve-data-sharing",
@@ -82,7 +82,7 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
     {
         "body": "Piper 15/17",
         "path": "${ZEROLEAK_DATA_DIR}/piper/core_15-17.csv",
-        "rows": "4,428 in window, 25 wells",
+        "rows": "4,428 in window, 26 wells",
         "source": "NSTA external DataReleases, CGG CoreAnalysis release; extract (Porosity_1, Hor_Permeability_1, WellName)",
         "note": "the raw Access table is not redistributed here",
         "licence": "NSTA Open User Licence",

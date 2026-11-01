@@ -26,7 +26,7 @@ The design, fixed before the data are read:
 The twenty offsets are listed rather than generated: a reader checking the
 supplement's table needs the same twenty values in the same order, and a formula that
 reproduces them is not the same thing as the values themselves.  The published table's
-baseline column is draw one, which is also why the check can be compared against it
+baseline column is draw 0, which is also why the check can be compared against it
 directly.
 
 A body folded by well -- never one core plug per well -- has neither knob: the folds

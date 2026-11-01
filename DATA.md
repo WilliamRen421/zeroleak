@@ -12,11 +12,11 @@ conditions that are not the licence itself are stated in the text below.
 | body | file | rows used | source | licence | shipped |
 |---|---|---|---|---|---|
 | Volve 15/9-19A (subset) | `data/volve_15_9_19a.csv` | 557 | Equinor Volve data set, CPOR / CKHG / DEPTH | Equinor Open Data Licence | **yes** |
-| Volve 15/9-19A (full) | `volve_core_full.csv` | 557 of 729 | Equinor Volve data set | Equinor Open Data Licence | no |
+| Volve 15/9-19A (full) | `volve_core_full.csv` | 557 of 728 | Equinor Volve data set | Equinor Open Data Licence | no |
 | SPE 10 Tarbert | `spe10/spe_phi.dat` + `spe_perm.dat` | 100,000 of 453,515 in window (462,000 cells) | SPE Comparative Solution Project 10, Christie & Blunt (2001) | SPE 10 benchmark, research use | no |
 | SPE 10 Upper Ness | same archive, z = 35–84 | 100,000 of 613,220 in window (660,000 cells) | as above | SPE 10 benchmark, research use | no |
 | Brent 211/29 | `brent/cgg_phik_211-29.csv` | 586, 5 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
-| Piper 15/17 | `piper/core_15-17.csv` | 4,428, 25 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
+| Piper 15/17 | `piper/core_15-17.csv` | 4,428, 26 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
 
 The Brent and Piper extracts are two- and three-column projections of one
 592,838-sample Access table. The raw table is not mirrored here.
@@ -58,4 +58,4 @@ blocks and only the first block is read. Reading it as interleaved triples
 
 `data/volve_15_9_19a.csv` is the Volve core table restricted to the window, with
 three columns kept (depth, φ, k) and rows sorted by depth. It is a derived
-extract, not the archive; the archive is 729 rows and is linked above.
+extract, not the archive; the archive is 728 rows and is linked above.
