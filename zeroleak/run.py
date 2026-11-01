@@ -43,12 +43,15 @@ def _sha256(path: str) -> str:
 
 
 def _git_commit() -> str:
-    """The commit the code was run from, marked `+dirty` if anything outside the
-    output directory has changed since.  The output directory is excluded on
-    purpose: a run rewrites it, so including it would mark every run dirty."""
+    """The commit the code was run from, as `git describe --tags --always`, marked
+    `+dirty` if anything outside the output directory has changed since.  A bare
+    short hash is not enough: it resolves only while the history it belongs to
+    exists, whereas a describe string still names the release after a rewrite.
+    The output directory is excluded on purpose: a run rewrites it, so including
+    it would mark every run dirty."""
     try:
         out = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "describe", "--tags", "--always"],
             capture_output=True, text=True, check=True,
         )
         dirty = subprocess.run(
