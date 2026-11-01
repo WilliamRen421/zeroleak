@@ -5,12 +5,16 @@ of the licences is ours to relax.
 
 ## The five bodies
 
+The `licence` column gives the licence name only, spelled exactly as
+`scripts/fetch_public_data.py` and Table S1b of the supplement spell it;
+conditions that are not the licence itself are stated in the text below.
+
 | body | file | rows used | source | licence | shipped |
 |---|---|---|---|---|---|
 | Volve 15/9-19A (subset) | `data/volve_15_9_19a.csv` | 557 | Equinor Volve data set, CPOR / CKHG / DEPTH | Equinor Open Data Licence | **yes** |
 | Volve 15/9-19A (full) | `volve_core_full.csv` | 557 of 729 | Equinor Volve data set | Equinor Open Data Licence | no |
-| SPE 10 Tarbert | `spe10/spe_phi.dat` + `spe_perm.dat` | 100,000 of 453,515 in window (462,000 cells) | SPE Comparative Solution Project 10, Christie & Blunt (2001) | distributed with the benchmark for research use | no |
-| SPE 10 Upper Ness | same archive, z = 35–84 | 100,000 of 613,220 in window (660,000 cells) | as above | as above | no |
+| SPE 10 Tarbert | `spe10/spe_phi.dat` + `spe_perm.dat` | 100,000 of 453,515 in window (462,000 cells) | SPE Comparative Solution Project 10, Christie & Blunt (2001) | SPE 10 benchmark, research use | no |
+| SPE 10 Upper Ness | same archive, z = 35–84 | 100,000 of 613,220 in window (660,000 cells) | as above | SPE 10 benchmark, research use | no |
 | Brent 211/29 | `brent/cgg_phik_211-29.csv` | 586, 5 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
 | Piper 15/17 | `piper/core_15-17.csv` | 4,428, 25 wells | NSTA external DataReleases, CGG CoreAnalysis release | NSTA Open User Licence | no |
 

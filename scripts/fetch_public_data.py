@@ -11,6 +11,11 @@ can see exactly what is missing.
 `--verify` hashes whatever is present and reports the entries it cannot find.
 Nothing is downloaded: three of these archives are tens of megabytes and two are
 redistributed under terms that do not permit us to mirror them.
+
+The `licence` field holds the licence name and nothing else, spelled exactly as
+the `licence` column of `DATA.md` and of Table S1b in the supplement spells it;
+where a condition on redistribution matters it goes in `note`, so that the same
+licence cannot end up under two names in three places.
 """
 from __future__ import annotations
 
@@ -28,7 +33,7 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
         "path": "data/volve_15_9_19a.csv",
         "rows": "557",
         "source": "Equinor Volve data set; CPOR, CKHG and DEPTH columns, windowed to 0.02-0.45 and k>0",
-        "licence": "Equinor Open Data Licence (Volve release)",
+        "licence": "Equinor Open Data Licence",
         "url": "https://www.equinor.com/energy/volve-data-sharing",
         "sha256": "89a3d45fc836814bd9377bee353a73b5a44496bc5cfe31544b2a4282085785d9",
         "shipped": "yes",
@@ -38,7 +43,7 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
         "path": "${ZEROLEAK_DATA_DIR}/volve_core_full.csv",
         "rows": "729 raw, 557 in window",
         "source": "Equinor Volve data set, core analysis export",
-        "licence": "Equinor Open Data Licence (Volve release)",
+        "licence": "Equinor Open Data Licence",
         "url": "https://www.equinor.com/energy/volve-data-sharing",
         "sha256": "c131154a2e7cafdc8200db8018480be77c4c7b29353a69677a328c439d10d915",
         "shipped": "no",
@@ -48,7 +53,7 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
         "path": "${ZEROLEAK_DATA_DIR}/spe10/spe_phi.dat",
         "rows": "85 x 220 x 60 = 1,122,000 cells",
         "source": "SPE Comparative Solution Project 10 (Christie & Blunt, 2001), spe_phi.dat",
-        "licence": "Distributed with the SPE 10 benchmark for research use; cite Christie & Blunt (2001)",
+        "licence": "SPE 10 benchmark, research use",
         "url": None,
         "sha256": "53f95e004a0803b04293539e0b1d5f82f2d25d341ca300cb117f1414d9dc7d8a",
         "shipped": "no",
@@ -58,7 +63,7 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
         "path": "${ZEROLEAK_DATA_DIR}/spe10/spe_perm.dat",
         "rows": "same grid, stored as [Kx | Ky | Kz]; only the Kx block is read",
         "source": "SPE Comparative Solution Project 10 (Christie & Blunt, 2001), spe_perm.dat",
-        "licence": "Distributed with the SPE 10 benchmark for research use; cite Christie & Blunt (2001)",
+        "licence": "SPE 10 benchmark, research use",
         "url": None,
         "sha256": "7e5d613bf44dabaec2ed2dd7ebe87e79515bb77ac071dad9d33823efc37c7914",
         "shipped": "no",
@@ -68,7 +73,8 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
         "path": "${ZEROLEAK_DATA_DIR}/brent/cgg_phik_211-29.csv",
         "rows": "586 in window, 5 wells",
         "source": "NSTA external DataReleases, CGG CoreAnalysis release; two-column extract (phi_pct, kh_md, well)",
-        "licence": "NSTA Open User Licence; the raw Access table is not redistributed here",
+        "note": "the raw Access table is not redistributed here",
+        "licence": "NSTA Open User Licence",
         "url": "https://datanstauthority.blob.core.windows.net/external/DataReleases/",
         "sha256": "435992f91fb2b97cb98b5ddccf267b2bd6d37202a8fabb3bb929270589cb867b",
         "shipped": "no",
@@ -78,7 +84,8 @@ REGISTRY: List[Dict[str, Optional[str]]] = [
         "path": "${ZEROLEAK_DATA_DIR}/piper/core_15-17.csv",
         "rows": "4,428 in window, 25 wells",
         "source": "NSTA external DataReleases, CGG CoreAnalysis release; extract (Porosity_1, Hor_Permeability_1, WellName)",
-        "licence": "NSTA Open User Licence; the raw Access table is not redistributed here",
+        "note": "the raw Access table is not redistributed here",
+        "licence": "NSTA Open User Licence",
         "url": "https://datanstauthority.blob.core.windows.net/external/DataReleases/",
         "sha256": "ec25a2d1a53d2d649e999f0c7db91bd2e8cc2fba8517e8ffc2fc335a1155d303",
         "shipped": "no",
@@ -136,7 +143,13 @@ def main(argv=None) -> int:
         print(f"{'body':{w_body}s}  {'shipped':7s}  sha256")
         for e in REGISTRY:
             print(f"{e['body']:{w_body}s}  {e['shipped']:7s}  {e['sha256']}")
-            print(f"{'':{w_body}s}  rows: {e['rows']}")
+            print(f"{'':{w_body}s}  rows:    {e['rows']}")
+            # The licence and the source are why this file exists; printing the
+            # digest alone would leave two thirds of each record out of sight.
+            print(f"{'':{w_body}s}  licence: {e['licence']}")
+            print(f"{'':{w_body}s}  source:  {e['source']}")
+            if e.get("note"):
+                print(f"{'':{w_body}s}  note:    {e['note']}")
 
     if not args.verify:
         return 0

@@ -323,8 +323,8 @@ every input, and `scripts/fetch_public_data.py --verify` checks a copy you have.
 
 | body | source | in this repository |
 |---|---|---|
-| Volve 15/9-19A | Equinor open release, CPOR / CKHG / DEPTH | **yes, in full** |
-| SPE 10 Tarbert, Upper Ness | public benchmark, Christie & Blunt (2001) | no; free to obtain |
+| Volve 15/9-19A | Equinor open release, CPOR / CKHG / DEPTH | **yes, in full**; Equinor Open Data Licence |
+| SPE 10 Tarbert, Upper Ness | public benchmark, Christie & Blunt (2001) | no; SPE 10 benchmark, research use |
 | Brent 211/29, Piper 15/17 | NSTA DataReleases, CGG CoreAnalysis | no; NSTA Open User Licence |
 
 **Volve ships in full.** `data/volve_15_9_19a.csv` holds every core plug inside
@@ -334,9 +334,10 @@ them. That is why `run`, `verify` and 66 of the 80 tests need no download.
 
 **SPE 10 is public.** Both units are distributed with the benchmark for research
 use. `scripts/fetch_public_data.py` is a registry rather than a downloader: it
-records the source, licence and SHA-256 of each file, and `--verify` re-hashes
-whatever is present. Nothing is fetched, because three of these archives are
-tens of megabytes and this repository does not mirror them.
+records the source, licence and SHA-256 of each file, `--list` prints that
+record, and `--verify` re-hashes whatever is present. Nothing is fetched,
+because three of these archives are tens of megabytes and this repository does
+not mirror them.
 
 **Brent and Piper are available under the NSTA Open User Licence.** Both are
 two- and three-column projections of one CGG CoreAnalysis release published in
